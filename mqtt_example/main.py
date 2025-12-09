@@ -68,7 +68,6 @@ if __name__ == "__main__":
     epd = EPD()
     epd.init()
     epd.Clear()
-    panel_image = compose_panel()
     image = compose_panel()
     epd.display(epd.getbuffer(image))
     epd.sleep()

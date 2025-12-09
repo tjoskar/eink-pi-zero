@@ -1,8 +1,11 @@
-config/settings.py
-venv
+.git
 __pycache__/
-*.pyc
+venv/
+main.png
 .DS_Store
+.gitignore
+.github
+.vscode
 weather_cache.json
-dishes_cache.json
 electricity_cache.json
+dishes_cache.json

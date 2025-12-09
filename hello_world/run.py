@@ -1,3 +1,7 @@
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent)) # Adds the current path to sys.path to import the driver in the parent dir
+
 from driver.epd7in5_v2 import EPD  # Import the EPD class for the 7.5" v2 e-paper display
 from PIL import Image, ImageDraw, ImageFont  # Import Pillow modules for image creation and drawing
 
