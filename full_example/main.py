@@ -1,4 +1,7 @@
 """Hardware display runner: MQTT + periodic refresh + button toggle."""
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 import time
 import sys
@@ -20,7 +23,7 @@ from config.settings import (
 )
 from devices import update_device_by_topic, find_engine_heater, set_engine_heater
 from display_controller import DisplayController
-from lib.waveshare_epd.epd7in5_V2 import EPD
+from driver.epd7in5_v2 import EPD
 
 def button_listener(controller: DisplayController, client: mqtt.Client):
     button = Button(21, pull_up=True, bounce_time=0.05)

@@ -11,7 +11,7 @@ from config.settings import DEVICES_CONFIG
 # Optional hardware LED (GPIO2) to indicate Motorvärmare status (ignored if unavailable).
 try:
     from gpiozero import LED  # type: ignore
-    _motor_led = LED(2)
+    _motor_led = LED(13)
 except Exception:  # broad: ImportError or runtime error creating LED
     _motor_led = None  # Fallback: no hardware available
 

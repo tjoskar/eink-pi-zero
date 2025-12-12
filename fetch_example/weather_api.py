@@ -23,8 +23,8 @@ WEATHER_ICONS = {
     "01d": "\uf157",  # Clear day
     "01n": "\uef44",  # Clear night
     # Partly cloudy
-    "02d": "\ue81a",  # Few clouds day
-    "02n": "\ue391",  # Few clouds night
+    "02d": "\uf172",  # Few clouds day
+    "02n": "\uf174",  # Few clouds night
     # Cloudy
     "03d": "\uf172",  # Scattered clouds
     "03n": "\uf174",
