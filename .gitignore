@@ -7,3 +7,5 @@ weather_cache.json
 dishes_cache.json
 electricity_cache.json
 *.png
+node_modules/
+dist

@@ -1,0 +1,10 @@
+/home/oskar/control-panel/logs/eink-panel.log {
+    daily
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 644 oskar oskar
+    copytruncate
+}

@@ -1,0 +1,28 @@
+[Unit]
+Description=E-Ink Control Panel
+After=network.target
+
+[Service]
+Type=simple
+User=oskar
+WorkingDirectory=/home/oskar/eink-pi-zero
+ExecStart=/usr/bin/node --enable-source-maps /home/oskar/eink-pi-zero/dist/hello-world.js
+Restart=on-failure
+RestartSec=10
+
+# Environment
+Environment=NODE_ENV=production
+Environment=MQTT_BROKER=mqtt://localhost:1883
+
+# Logging
+StandardOutput=append:/home/oskar/control-panel/logs/eink-panel.log
+StandardError=append:/home/oskar/control-panel/logs/eink-panel.log
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/oskar/control-panel/logs /tmp/eink-panel
+
+[Install]
+WantedBy=multi-user.target

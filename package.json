@@ -1,0 +1,27 @@
+{
+  "name": "eink-pi-zero",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "E-ink display examples using JSX and TypeScript on Raspberry Pi Zero 2.",
+  "scripts": {
+    "dev": "MOCK=1 tsx src/hello-world-with-button/main.ts",
+    "build": "esbuild src/*/main.tsx src/*/main.ts --bundle --platform=node --format=esm --outdir=dist --external:@napi-rs/canvas --sourcemap",
+    "start": "node --enable-source-maps dist/hello-world/main.js",
+    "deploy": "./scripts/deploy.sh",
+    "typecheck": "tsc --noEmit"
+  },
+  "imports": {
+    "#lib/*": "./lib/*.js",
+    "#jsx/*": "./jsx/lib/*.js"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "^0.1.89",
+    "mqtt": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.24.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.3"
+  }
+}
