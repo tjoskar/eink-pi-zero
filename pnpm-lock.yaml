@@ -14,6 +14,9 @@ importers:
       mqtt:
         specifier: ^5.0.0
         version: 5.14.1
+      yoga-layout:
+        specifier: ^3.2.1
+        version: 3.2.1
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -605,6 +608,9 @@ packages:
       utf-8-validate:
         optional: true
 
+  yoga-layout@3.2.1:
+    resolution: {integrity: sha512-0LPOt3AxKqMdFBZA3HBAt/t/8vIKq7VaQYbuA8WxCgung+p9TVyKRYdpvCb80HcdTN2NkbIKbhNwKUfm3tQywQ==}
+
 snapshots:
 
   '@babel/runtime@7.28.6': {}
@@ -1070,3 +1076,5 @@ snapshots:
       worker-timers-worker: 9.0.13
 
   ws@8.19.0: {}
+
+  yoga-layout@3.2.1: {}

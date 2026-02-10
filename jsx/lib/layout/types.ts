@@ -12,15 +12,27 @@ export interface LayoutBox {
 /**
  * Style properties that affect layout calculation.
  *
- * These properties are inspired by CSS Flexbox but simplified for e-ink use cases.
- * Not all CSS flexbox properties are supported - only the most commonly needed ones.
+ * These properties are inspired by CSS Flexbox and powered by yoga-layout.
+ * Supports the most common flexbox properties needed for e-ink dashboards.
  */
 export interface LayoutStyle {
-  /** Fixed width in pixels. If not set, width is calculated from flex or defaults to container width. */
+  /** Fixed width in pixels. If not set, width is calculated automatically. */
   width?: number;
 
-  /** Fixed height in pixels. If not set, height is calculated from flex or defaults to content height. */
+  /** Fixed height in pixels. If not set, height is calculated automatically. */
   height?: number;
+
+  /** Minimum width in pixels. */
+  minWidth?: number;
+
+  /** Maximum width in pixels. */
+  maxWidth?: number;
+
+  /** Minimum height in pixels. */
+  minHeight?: number;
+
+  /** Maximum height in pixels. */
+  maxHeight?: number;
 
   /** Padding on all sides in pixels. Applied inside the element's box. */
   padding?: number;
@@ -29,11 +41,31 @@ export interface LayoutStyle {
   gap?: number;
 
   /**
-   * Flex grow factor. Elements with flex will share remaining space proportionally.
-   * @example Two children with flex={1} each get 50% of remaining space
-   * @example Child with flex={2} gets twice as much space as child with flex={1}
+   * Flex grow factor. Elements with flexGrow will share remaining space proportionally.
+   * @example Two children with flexGrow={1} each get 50% of remaining space
+   * @example Child with flexGrow={2} gets twice as much space as child with flexGrow={1}
    */
   flex?: number;
+
+  /**
+   * Flex grow factor. Alias for flex.
+   */
+  flexGrow?: number;
+
+  /**
+   * Flex shrink factor. Determines how much an element shrinks relative to others
+   * when there isn't enough space.
+   * @default 1
+   */
+  flexShrink?: number;
+
+  /**
+   * Whether children should wrap to new lines when they overflow.
+   * - "nowrap": All children on one line (default)
+   * - "wrap": Wrap to new lines
+   * @default "nowrap"
+   */
+  flexWrap?: "nowrap" | "wrap";
 
   /**
    * Direction of child layout.
@@ -50,9 +82,10 @@ export interface LayoutStyle {
    * - "start": Align to start (top or left)
    * - "center": Center children
    * - "end": Align to end (bottom or right)
-   * @default "start"
+   * - "stretch": Stretch to fill (default)
+   * @default "stretch"
    */
-  align?: "start" | "center" | "end";
+  align?: "start" | "center" | "end" | "stretch";
 
   /**
    * Distribution of children on the main axis.

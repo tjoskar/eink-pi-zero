@@ -51,7 +51,7 @@ export function App({ buttonPresses, lastUpdate }: AppProps) {
       background="white"
     >
       {/* Header */}
-      <view direction="column" gap={8} height={60}>
+      <view direction="column" gap={8}>
         <text size={48} weight="bold" color="black">
           Hej Emma!
         </text>
@@ -62,7 +62,7 @@ export function App({ buttonPresses, lastUpdate }: AppProps) {
         direction="column"
         gap={16}
         padding={24}
-        height={180}
+        align="start"
         background="white"
       >
         <view direction="row" gap={16} align="center">
@@ -83,7 +83,7 @@ export function App({ buttonPresses, lastUpdate }: AppProps) {
       </view>
 
       {/* Footer */}
-      <view direction="row" justify="center" height={30}>
+      <view direction="row" justify="center">
         <text size={16} color="black">
           Press button to update
         </text>

@@ -184,7 +184,7 @@ export { ICON_CODEPOINTS, getIconChar } from "./components/icons-name.ts";
 export {
   setLayoutEngine,
   getLayoutEngine,
-  SimpleLayoutEngine,
+  YogaLayoutEngine,
 } from "./layout/index.ts";
 export type {
   LayoutEngine,

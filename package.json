@@ -16,7 +16,8 @@
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.89",
-    "mqtt": "^5.0.0"
+    "mqtt": "^5.0.0",
+    "yoga-layout": "^3.2.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

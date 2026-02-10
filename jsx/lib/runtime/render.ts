@@ -123,22 +123,41 @@ function getTextContent(children: JSXChildren | undefined): string {
  *
  * Layout nodes only contain the style information needed for layout calculation.
  * Element-specific props (like font, color, src) are not included.
+ *
+ * For text elements, height is automatically calculated from font size if not specified.
  */
 function buildLayoutTree(element: JSXElement): LayoutNode {
   const resolved = resolveElement(element);
-  const props = resolved.props;
+  const { type, props } = resolved;
 
   // Build children layout nodes
   const childElements = flattenChildren(props.children);
   const childNodes = childElements.map(buildLayoutTree);
 
+  // Calculate automatic height for text elements based on font size
+  // Line height is approximately 1.2x font size
+  let height = props.height;
+  if (type === "text" && height === undefined) {
+    const textProps = props as TextProps;
+    if (textProps.size !== undefined) {
+      height = Math.ceil(textProps.size * 1.2);
+    }
+  }
+
   return {
     style: {
       width: props.width,
-      height: props.height,
+      height,
+      minWidth: props.minWidth,
+      maxWidth: props.maxWidth,
+      minHeight: props.minHeight,
+      maxHeight: props.maxHeight,
       padding: props.padding,
       gap: props.gap,
       flex: props.flex,
+      flexGrow: props.flexGrow,
+      flexShrink: props.flexShrink,
+      flexWrap: props.flexWrap,
       direction: props.direction,
       align: props.align,
       justify: props.justify,
