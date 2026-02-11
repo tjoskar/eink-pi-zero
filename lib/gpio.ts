@@ -1,65 +1,219 @@
 /**
- * GPIO utilities for buttons and LED.
+ * GPIO utilities for buttons and LED via Python daemon.
  *
- * Uses:
- * - gpiomon for button events (long-running process)
- * - gpioset for LED control
- * - Keyboard 'b' key in mock mode for button simulation
+ * Uses a persistent Python process (gpio_daemon.py) for GPIO control
+ * via stdin/stdout JSON IPC. This avoids spawning/killing processes
+ * for each operation and provides better reliability.
+ *
+ * In mock mode: simulates button presses via keyboard 'b' key.
  */
 
 import { spawn, ChildProcess } from "node:child_process";
+import { join } from "node:path";
+import { createInterface, Interface } from "node:readline";
 import { IS_MOCK } from "./env.js";
 
-/** GPIO chip (gpiochip0 on Pi) */
-const GPIO_CHIP = "gpiochip0";
+/** Timeout for GPIO commands (ms) */
+const COMMAND_TIMEOUT_MS = 5_000;
 
-/** Button GPIO pin (placeholder - update for your setup) */
-const BUTTON_PIN = 21;
-
-/** LED GPIO pin (placeholder - update for your setup) */
-const LED_PIN = 13;
+/** Path to the Python GPIO daemon script */
+const GPIO_DAEMON_SCRIPT = join(
+  import.meta.dirname,
+  "..",
+  "..",
+  "python",
+  "gpio_daemon.py",
+);
 
 /** Button press callback type */
 export type ButtonCallback = () => void;
 
-/** Timeout for LED operations (matches display timeout) */
-const LED_TIMEOUT_MS = 30_000;
+/** GPIO daemon process */
+let daemonProcess: ChildProcess | null = null;
 
-/** Active gpiomon process */
-let gpiomonProcess: ChildProcess | null = null;
+/** Readline interface for reading daemon stdout */
+let daemonReader: Interface | null = null;
 
-/** Active gpioset process for LED (must be kept alive to hold GPIO state) */
-let ledProcess: ChildProcess | null = null;
+/** Registered button callbacks by pin */
+const buttonCallbacks = new Map<number, ButtonCallback[]>();
 
-/** Mutex for serializing LED operations */
-let ledMutex: Promise<void> = Promise.resolve();
+/** Pending command responses */
+const pendingCommands = new Map<
+  string,
+  { resolve: () => void; reject: (err: Error) => void }
+>();
 
-/** Button callback */
-let buttonCallback: ButtonCallback | null = null;
+/** Whether daemon is ready */
+let daemonReady = false;
+
+/** Promise that resolves when daemon is ready */
+let daemonReadyPromise: Promise<void> | null = null;
+let daemonReadyResolve: (() => void) | null = null;
 
 /**
- * Set up button listener.
- *
- * In mock mode: listens for 'b' key press on stdin.
- * On Pi: uses gpiomon to watch for GPIO falling edge.
- *
- * @param callback - Function to call when button is pressed
+ * Send a command to the daemon.
  */
-export function onButtonPress(callback: ButtonCallback): void {
-  buttonCallback = callback;
-
-  if (IS_MOCK) {
-    setupMockButton();
-  } else {
-    setupGpioButton();
+function sendCommand(cmd: Record<string, unknown>): void {
+  if (!daemonProcess?.stdin) {
+    throw new Error("GPIO daemon not running");
   }
+  const line = JSON.stringify(cmd) + "\n";
+  daemonProcess.stdin.write(line);
+}
+
+/**
+ * Send a command and wait for response.
+ */
+async function sendCommandWithResponse(
+  cmd: Record<string, unknown>,
+): Promise<void> {
+  const cmdType = cmd.cmd as string;
+
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      pendingCommands.delete(cmdType);
+      reject(new Error(`GPIO command timeout: ${cmdType}`));
+    }, COMMAND_TIMEOUT_MS);
+
+    pendingCommands.set(cmdType, {
+      resolve: () => {
+        clearTimeout(timeoutId);
+        resolve();
+      },
+      reject: (err) => {
+        clearTimeout(timeoutId);
+        reject(err);
+      },
+    });
+
+    sendCommand(cmd);
+  });
+}
+
+/**
+ * Handle a message from the daemon.
+ */
+function handleDaemonMessage(line: string): void {
+  try {
+    const msg = JSON.parse(line);
+
+    // Handle ready event
+    if (msg.event === "ready") {
+      console.log("[gpio] Daemon ready");
+      daemonReady = true;
+      daemonReadyResolve?.();
+      return;
+    }
+
+    // Handle button event
+    if (msg.event === "button") {
+      const pin = msg.pin as number;
+      const callbacks = buttonCallbacks.get(pin);
+      if (callbacks) {
+        console.log(`[gpio] Button event on pin ${pin}`);
+        for (const cb of callbacks) {
+          try {
+            cb();
+          } catch (err) {
+            console.error("[gpio] Button callback error:", err);
+          }
+        }
+      }
+      return;
+    }
+
+    // Handle command response
+    if (msg.response === "ok") {
+      const cmd = msg.cmd as string;
+      const pending = pendingCommands.get(cmd);
+      if (pending) {
+        pendingCommands.delete(cmd);
+        pending.resolve();
+      }
+      return;
+    }
+
+    // Handle error
+    if (msg.error) {
+      console.error("[gpio] Daemon error:", msg.error);
+      // Reject any pending command (we don't know which one failed)
+      for (const [cmd, pending] of pendingCommands) {
+        pendingCommands.delete(cmd);
+        pending.reject(new Error(msg.error));
+      }
+      return;
+    }
+  } catch (err) {
+    console.error("[gpio] Failed to parse daemon message:", line, err);
+  }
+}
+
+/**
+ * Start the GPIO daemon process.
+ *
+ * Must be called before using any GPIO functions (except in mock mode).
+ */
+export async function startGpioDaemon(): Promise<void> {
+  if (IS_MOCK) {
+    console.log("[gpio] Mock mode - daemon not started");
+    setupMockButton();
+    return;
+  }
+
+  if (daemonProcess) {
+    console.log("[gpio] Daemon already running");
+    return;
+  }
+
+  // Create ready promise
+  daemonReadyPromise = new Promise((resolve) => {
+    daemonReadyResolve = resolve;
+  });
+
+  console.log(`[gpio] Starting daemon: python3 ${GPIO_DAEMON_SCRIPT}`);
+
+  daemonProcess = spawn("python3", [GPIO_DAEMON_SCRIPT], {
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+
+  // Set up readline for stdout
+  daemonReader = createInterface({
+    input: daemonProcess.stdout!,
+    crlfDelay: Infinity,
+  });
+
+  daemonReader.on("line", handleDaemonMessage);
+
+  // Log stderr
+  daemonProcess.stderr?.on("data", (data: Buffer) => {
+    console.error(`[gpio] Daemon stderr: ${data.toString().trim()}`);
+  });
+
+  daemonProcess.on("error", (err) => {
+    console.error(`[gpio] Failed to start daemon: ${err.message}`);
+    daemonProcess = null;
+  });
+
+  daemonProcess.on("close", (code) => {
+    console.log(`[gpio] Daemon exited with code ${code}`);
+    daemonProcess = null;
+    daemonReader = null;
+    daemonReady = false;
+  });
+
+  // Wait for ready event
+  await Promise.race([
+    daemonReadyPromise,
+    new Promise<void>((_, reject) =>
+      setTimeout(() => reject(new Error("GPIO daemon startup timeout")), 5000),
+    ),
+  ]);
 }
 
 /**
  * Set up keyboard listener for mock button.
  */
 function setupMockButton(): void {
-  // Enable raw mode for single keypress detection
   if (process.stdin.isTTY) {
     process.stdin.setRawMode(true);
   }
@@ -74,10 +228,18 @@ function setupMockButton(): void {
       process.exit();
     }
 
-    // 'b' for button
+    // 'b' for button - trigger all registered callbacks
     if (key.toLowerCase() === "b") {
       console.log("[gpio] Mock button pressed (keyboard 'b')");
-      buttonCallback?.();
+      for (const callbacks of buttonCallbacks.values()) {
+        for (const cb of callbacks) {
+          try {
+            cb();
+          } catch (err) {
+            console.error("[gpio] Button callback error:", err);
+          }
+        }
+      }
     }
   });
 
@@ -85,161 +247,71 @@ function setupMockButton(): void {
 }
 
 /**
- * Set up gpiomon for real button on Pi.
+ * Subscribe to button press events on a pin.
+ *
+ * @param pin - GPIO pin number
+ * @param callback - Function to call when button is pressed
  */
-function setupGpioButton(): void {
-  // gpiomon watches for GPIO events (libgpiod v2.x syntax)
-  // -c = chip
-  // -e = edge type (falling = button press connects to ground)
-  // -b = bias (pull-up keeps pin high when button not pressed)
-  // -p = debounce period (filters mechanical button bounce)
-  const args = [
-    "-c",
-    GPIO_CHIP,
-    "-e",
-    "falling",
-    "-b",
-    "pull-up",
-    "-p",
-    "50ms",
-    String(BUTTON_PIN),
-  ];
+export async function onButtonPress(
+  pin: number,
+  callback: ButtonCallback,
+): Promise<void> {
+  // Register callback
+  const existing = buttonCallbacks.get(pin) || [];
+  existing.push(callback);
+  buttonCallbacks.set(pin, existing);
 
-  console.log(`[gpio] Starting gpiomon: gpiomon ${args.join(" ")}`);
+  // In mock mode, we're done (mock setup happens in startGpioDaemon)
+  if (IS_MOCK) {
+    return;
+  }
 
-  gpiomonProcess = spawn("gpiomon", args, {
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-
-  gpiomonProcess.stdout?.on("data", (data: Buffer) => {
-    const line = data.toString().trim();
-    if (line) {
-      console.log(`[gpio] Button event: ${line}`);
-      buttonCallback?.();
-    }
-  });
-
-  gpiomonProcess.stderr?.on("data", (data: Buffer) => {
-    console.error(`[gpio] gpiomon stderr: ${data.toString().trim()}`);
-  });
-
-  gpiomonProcess.on("error", (err) => {
-    console.error(`[gpio] Failed to start gpiomon: ${err.message}`);
-    console.error(
-      "[gpio] Make sure libgpiod-utils is installed: sudo apt install gpiod",
-    );
-  });
-
-  gpiomonProcess.on("close", (code) => {
-    console.log(`[gpio] gpiomon exited with code ${code}`);
-    gpiomonProcess = null;
-  });
+  // Subscribe to pin if this is the first callback for it
+  if (existing.length === 1) {
+    await sendCommandWithResponse({ cmd: "button_subscribe", pin });
+    console.log(`[gpio] Subscribed to button on pin ${pin}`);
+  }
 }
 
 /**
  * Set LED state.
  *
- * Uses a mutex to ensure only one LED operation runs at a time.
- *
+ * @param pin - GPIO pin number
  * @param on - true to turn LED on, false to turn off
  */
-export async function setLed(on: boolean): Promise<void> {
+export async function setLed(pin: number, on: boolean): Promise<void> {
   if (IS_MOCK) {
-    console.log(`[gpio] Mock LED: ${on ? "ON" : "OFF"}`);
+    console.log(`[gpio] Mock LED pin ${pin}: ${on ? "ON" : "OFF"}`);
     return;
   }
 
-  // Queue this operation behind any pending LED operations
-  const previousMutex = ledMutex;
-  let releaseMutex: () => void;
-  ledMutex = new Promise((resolve) => {
-    releaseMutex = resolve;
-  });
-
-  // Wait for previous operation to complete (with timeout)
-  await Promise.race([
-    previousMutex,
-    new Promise<void>((_, reject) =>
-      setTimeout(() => reject(new Error("LED mutex timeout")), LED_TIMEOUT_MS),
-    ),
-  ]);
-
-  try {
-    // Kill previous LED process and wait for it to fully exit (releases the GPIO line)
-    if (ledProcess) {
-      const oldProcess = ledProcess;
-      ledProcess = null;
-      await new Promise<void>((resolve) => {
-        oldProcess.on("close", () => resolve());
-        oldProcess.kill("SIGTERM");
-      });
-      // Small delay to ensure GPIO line is fully released
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    }
-
-    await new Promise<void>((resolve, reject) => {
-      // gpioset -c <chip> <pin>=<value>
-      // Note: gpioset runs until terminated to hold the GPIO state
-      const value = on ? "1" : "0";
-      const args = ["-c", GPIO_CHIP, `${LED_PIN}=${value}`];
-
-      ledProcess = spawn("gpioset", args, {
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-
-      // gpioset doesn't exit by default (holds the line), so resolve immediately
-      // after a short delay to ensure it started successfully
-      const startupTimeout = setTimeout(() => {
-        resolve();
-      }, 50);
-
-      ledProcess.on("error", (err) => {
-        clearTimeout(startupTimeout);
-        ledProcess = null;
-        reject(new Error(`Failed to run gpioset: ${err.message}`));
-      });
-
-      ledProcess.on("close", (code) => {
-        clearTimeout(startupTimeout);
-        // Only reject if it exited unexpectedly (not killed by us)
-        if (ledProcess !== null && code !== 0) {
-          ledProcess = null;
-          reject(new Error(`gpioset exited with code ${code}`));
-        }
-        ledProcess = null;
-      });
-    });
-  } finally {
-    releaseMutex!();
-  }
-}
-
-/**
- * Flash LED (on briefly, then off).
- *
- * @param durationMs - How long to keep LED on (default 100ms)
- */
-export async function flashLed(durationMs = 100): Promise<void> {
-  await setLed(true);
-  await new Promise((resolve) => setTimeout(resolve, durationMs));
-  await setLed(false);
+  await sendCommandWithResponse({ cmd: "led", pin, on });
 }
 
 /**
  * Clean up GPIO resources.
  */
 export function cleanup(): void {
-  if (gpiomonProcess) {
-    console.log("[gpio] Stopping gpiomon");
-    gpiomonProcess.kill("SIGTERM");
-    gpiomonProcess = null;
+  if (daemonProcess) {
+    console.log("[gpio] Stopping daemon");
+    try {
+      sendCommand({ cmd: "shutdown" });
+    } catch {
+      // Ignore errors when sending shutdown
+    }
+    // Give it a moment to clean up, then kill
+    setTimeout(() => {
+      if (daemonProcess) {
+        daemonProcess.kill("SIGTERM");
+        daemonProcess = null;
+      }
+    }, 100);
   }
 
-  if (ledProcess) {
-    console.log("[gpio] Stopping LED process");
-    ledProcess.kill("SIGTERM");
-    ledProcess = null;
-  }
+  daemonReader = null;
+  daemonReady = false;
+  buttonCallbacks.clear();
+  pendingCommands.clear();
 
   // Restore terminal if in mock mode
   if (IS_MOCK && process.stdin.isTTY) {

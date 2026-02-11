@@ -6,9 +6,20 @@
  * - Button handling (real GPIO or mock keyboard)
  */
 import { renderApp } from "./app.tsx";
-import { renderToDisplay } from "#lib/display.ts";
-import { onButtonPress, cleanup, setLed } from "#lib/gpio.ts";
+import {
+  startHardwareDaemon,
+  onButtonPress,
+  cleanup,
+  setLed,
+  renderToDisplay,
+} from "#lib/hardware.ts";
 import { IS_MOCK } from "#lib/env.ts";
+
+/** GPIO pin for the button */
+const BUTTON_PIN = 21;
+
+/** GPIO pin for the LED */
+const LED_PIN = 13;
 
 // Application state
 let buttonPresses = 0;
@@ -29,10 +40,10 @@ async function updateDisplay(): Promise<void> {
   try {
     if (buttonPresses % 2 === 0) {
       console.log("Turning LED ON");
-      await setLed(true);
+      await setLed(LED_PIN, true);
     } else {
       console.log("Turning LED OFF");
-      await setLed(false);
+      await setLed(LED_PIN, false);
     }
     const imageBuffer = await renderApp({
       buttonPresses,
@@ -71,8 +82,11 @@ async function main(): Promise<void> {
   console.log("╚════════════════════════════════════════╝");
   console.log();
 
+  // Start hardware daemon
+  await startHardwareDaemon();
+
   // Set up button handler
-  onButtonPress(handleButtonPress);
+  await onButtonPress(BUTTON_PIN, handleButtonPress);
 
   // Initial display update
   await updateDisplay();
