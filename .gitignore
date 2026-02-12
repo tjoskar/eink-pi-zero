@@ -1,4 +1,5 @@
 config/settings.py
+v1/config/settings.py
 .env
 venv
 __pycache__/
