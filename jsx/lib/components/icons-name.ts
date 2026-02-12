@@ -84,6 +84,10 @@ export const ICON_CODEPOINTS: Record<string, string> = {
   speaker: "\ue32d",
   router: "\ue328",
   sensors: "\ue51e",
+  local_laundry_service: "\ue832",
+  dry_cleaning: "\ue54a",
+  local_fire_department: "\ue531",
+  electric_bike: "\ueb1b",
 
   // Time & Calendar
   schedule: "\ue8b5",
