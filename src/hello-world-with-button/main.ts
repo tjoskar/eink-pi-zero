@@ -98,7 +98,7 @@ async function main(): Promise<void> {
     console.log("Running in mock mode:");
     console.log("  • Press 'b' to simulate button press");
     console.log("  • Press Ctrl+C to exit");
-    console.log("  • Images saved to /tmp/eink-panel/latest.png");
+    console.log("  • Images saved to ./preview.png");
     console.log();
   }
 }

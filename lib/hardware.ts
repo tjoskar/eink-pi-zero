@@ -382,14 +382,16 @@ export async function renderToDisplay(
   imageBuffer: Buffer,
   options: RenderOptions = {},
 ): Promise<void> {
-  // Write image to temp file
-  const imagePath = join(tmpdir(), "eink-latest.png");
-  await writeFile(imagePath, imageBuffer);
-
   if (IS_MOCK) {
+    const imagePath = "preview.png";
+    await writeFile(imagePath, imageBuffer);
     console.log(`[hardware] Mock render: ${imagePath}`);
     return;
   }
+
+  // Write image to temp file for daemon
+  const imagePath = join(tmpdir(), "eink-latest.png");
+  await writeFile(imagePath, imageBuffer);
 
   // Send render command to daemon
   await sendCommandWithResponse(

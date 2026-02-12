@@ -154,6 +154,20 @@ export interface Canvas {
   fill(): void;
 
   /**
+   * Set the text baseline alignment.
+   *
+   * @param baseline - Baseline value, e.g., "top", "middle", "alphabetic"
+   */
+  setTextBaseline(baseline: CanvasTextBaseline): void;
+
+  /**
+   * Set the horizontal text alignment.
+   *
+   * @param align - Alignment value, e.g., "left", "center", "right"
+   */
+  setTextAlign(align: CanvasTextAlign): void;
+
+  /**
    * Set the stroke color for lines.
    *
    * @param color - Color string, e.g., "black", "#333"

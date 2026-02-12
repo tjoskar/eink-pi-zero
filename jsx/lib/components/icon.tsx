@@ -37,6 +37,9 @@ export interface IconProps {
 
   /** Icon color. Default: "black" */
   color?: string;
+
+  /** Override parent's cross-axis alignment for this icon */
+  alignSelf?: "auto" | "start" | "center" | "end" | "stretch";
 }
 
 /**
@@ -65,13 +68,17 @@ export function Icon({
   name,
   size = 24,
   color = "black",
+  alignSelf,
 }: IconProps): JSX.Element {
   const char = getIconChar(name);
 
   return (
     <text
-      font={`${size}px ${ICON_FONT_FAMILY}`}
+      size={size}
+      width={size}
+      font={ICON_FONT_FAMILY}
       color={color}
+      alignSelf={alignSelf}
     >
       {char}
     </text>

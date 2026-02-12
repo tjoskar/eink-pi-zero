@@ -4,7 +4,8 @@
   "type": "module",
   "description": "E-ink display examples using JSX and TypeScript on Raspberry Pi Zero 2.",
   "scripts": {
-    "dev": "MOCK=1 tsx src/hello-world-with-button/main.ts",
+    "dev": "MOCK=1 tsx --env-file=.env",
+    "dev:watch": "MOCK=1 tsx --env-file=.env --watch",
     "build": "esbuild src/*/main.tsx src/*/main.ts --bundle --platform=node --format=esm --outdir=dist --external:@napi-rs/canvas --sourcemap",
     "start": "node --enable-source-maps dist/hello-world/main.js",
     "deploy": "./scripts/deploy.sh",

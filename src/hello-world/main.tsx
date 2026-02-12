@@ -2,7 +2,7 @@
  * Hello World example.
  */
 import { App } from "./app.tsx";
-import { renderToDisplay } from "#lib/display.ts";
+import { renderToDisplay } from "#lib/hardware.ts";
 import { jsx, createCanvas, render, registerFont, setTheme, EINK_BW_THEME } from "#jsx/mod";
 
 // Configure theme with custom default font

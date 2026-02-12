@@ -160,6 +160,7 @@ function buildLayoutTree(element: JSXElement): LayoutNode {
       flexWrap: props.flexWrap,
       direction: props.direction,
       align: props.align,
+      alignSelf: props.alignSelf,
       justify: props.justify,
     },
     children: childNodes,
@@ -373,12 +374,22 @@ async function drawElement(
       const text = getTextContent(props.children);
       const padding = props.padding ?? 0;
 
-      // Calculate text position
-      // Text baseline is approximately 80% down from top for most fonts
-      const fontSize = textProps.size ?? 16;
-      const baselineOffset = fontSize * 0.8;
+      // Vertically center text within its box
+      canvas.setTextBaseline("middle");
 
-      canvas.fillText(text, box.x + padding, box.y + padding + baselineOffset);
+      // Horizontal alignment
+      const align = textProps.textAlign ?? "left";
+      canvas.setTextAlign(align);
+      let textX: number;
+      if (align === "center") {
+        textX = box.x + box.width / 2;
+      } else if (align === "right") {
+        textX = box.x + box.width - padding;
+      } else {
+        textX = box.x + padding;
+      }
+      canvas.fillText(text, textX, box.y + box.height / 2);
+      canvas.setTextAlign("left");
       break;
     }
 

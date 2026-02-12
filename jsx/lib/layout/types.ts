@@ -88,6 +88,13 @@ export interface LayoutStyle {
   align?: "start" | "center" | "end" | "stretch";
 
   /**
+   * Override the parent's align for this specific child.
+   * Same values as align, plus "auto" to use the parent's value.
+   * @default "auto"
+   */
+  alignSelf?: "auto" | "start" | "center" | "end" | "stretch";
+
+  /**
    * Distribution of children on the main axis.
    * For direction="row", this is horizontal distribution.
    * For direction="column", this is vertical distribution.

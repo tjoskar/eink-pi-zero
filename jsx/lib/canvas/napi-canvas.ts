@@ -164,6 +164,14 @@ export class NapiCanvas implements Canvas {
     this.ctx.stroke();
   }
 
+  setTextBaseline(baseline: CanvasTextBaseline): void {
+    this.ctx.textBaseline = baseline;
+  }
+
+  setTextAlign(align: CanvasTextAlign): void {
+    this.ctx.textAlign = align;
+  }
+
   fill(): void {
     this.ctx.fill();
   }

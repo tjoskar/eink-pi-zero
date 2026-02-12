@@ -150,6 +150,18 @@ export class YogaLayoutEngine implements LayoutEngine {
     yogaNode.setAlignItems(mapAlign(style.align));
     yogaNode.setJustifyContent(mapJustify(style.justify));
 
+    // Align self (override parent's alignItems for this node)
+    if (style.alignSelf) {
+      const alignSelfMap: Record<string, Align> = {
+        auto: Align.Auto,
+        start: Align.FlexStart,
+        center: Align.Center,
+        end: Align.FlexEnd,
+        stretch: Align.Stretch,
+      };
+      yogaNode.setAlignSelf(alignSelfMap[style.alignSelf] ?? Align.Auto);
+    }
+
     // Flex wrap
     if (style.flexWrap) {
       yogaNode.setFlexWrap(mapFlexWrap(style.flexWrap));

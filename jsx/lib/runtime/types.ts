@@ -73,6 +73,13 @@ export interface TextProps extends BaseProps {
    * @example color="black" or color="#FF0000"
    */
   color?: Color;
+
+  /**
+   * Horizontal text alignment within the element's box.
+   * Only has effect when the element has a known width (explicit or stretched).
+   * @example textAlign="center"
+   */
+  textAlign?: "left" | "center" | "right";
 }
 
 /** Props for <image> elements */
