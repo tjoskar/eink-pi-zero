@@ -9,7 +9,10 @@
     "build": "esbuild src/*/main.tsx src/*/main.ts --bundle --platform=node --format=esm --outdir=dist --external:@napi-rs/canvas --sourcemap",
     "start": "node --enable-source-maps dist/hello-world/main.js",
     "deploy": "./scripts/deploy.sh",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --project unit --passWithNoTests",
+    "test:snapshot": "docker build -t eink-test -f Dockerfile.test . && docker run --rm eink-test",
+    "test:snapshot:update": "docker build -t eink-test -f Dockerfile.test . && docker run --rm -e UPDATE_SNAPSHOTS=1 -v ./src:/app/src eink-test"
   },
   "imports": {
     "#lib/*": "./lib/*.js",
@@ -22,8 +25,12 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/pngjs": "6.0.5",
     "esbuild": "^0.24.0",
+    "pixelmatch": "7.1.0",
+    "pngjs": "7.0.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "4.0.18"
   }
 }

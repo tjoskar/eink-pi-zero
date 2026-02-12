@@ -8,5 +8,8 @@ weather_cache.json
 dishes_cache.json
 electricity_cache.json
 *.png
+!**/__snapshots__/*.png
+*.actual.png
+*.diff.png
 node_modules/
 dist
