@@ -7,13 +7,13 @@
  */
 import { renderApp } from "./app.tsx";
 import {
-  startHardwareDaemon,
+  initHardware,
   onButtonPress,
-  cleanup,
   setLed,
   renderToDisplay,
-} from "#lib/hardware.ts";
-import { IS_MOCK } from "#lib/env.ts";
+  IS_MOCK
+} from "#lib";
+import { once } from "node:events";
 
 /** GPIO pin for the button */
 const BUTTON_PIN = 21;
@@ -83,7 +83,7 @@ async function main(): Promise<void> {
   console.log();
 
   // Start hardware daemon
-  await startHardwareDaemon();
+  using _hardware = await initHardware();
 
   // Set up button handler
   await onButtonPress(BUTTON_PIN, handleButtonPress);
@@ -101,20 +101,13 @@ async function main(): Promise<void> {
     console.log("  • Images saved to ./preview.png");
     console.log();
   }
+
+  await Promise.race([
+    once(process, "SIGINT"),
+    once(process, "SIGTERM"),
+    once(process, "SIGHUP"),
+  ]);
 }
-
-// Handle clean shutdown
-process.on("SIGINT", () => {
-  console.log("Shutting down...");
-  cleanup();
-  process.exit(0);
-});
-
-process.on("SIGTERM", () => {
-  console.log("Shutting down...");
-  cleanup();
-  process.exit(0);
-});
 
 // Start the application
 main().catch((error) => {

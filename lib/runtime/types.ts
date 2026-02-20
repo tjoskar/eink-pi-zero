@@ -6,7 +6,7 @@
  */
 
 import type { LayoutStyle } from "../layout/types.ts";
-import type { Color } from "../theme/index.ts";
+import type { Color } from "../theme.ts";
 
 // =============================================================================
 // JSX Node Types

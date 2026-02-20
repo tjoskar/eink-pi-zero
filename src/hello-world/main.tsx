@@ -2,8 +2,7 @@
  * Hello World example.
  */
 import { App } from "./app.tsx";
-import { renderToDisplay } from "#lib/hardware.ts";
-import { jsx, createCanvas, render, registerFont, setTheme, EINK_BW_THEME } from "#jsx/mod";
+import { jsx, Canvas, render, registerFont, setTheme, EINK_BW_THEME, renderToDisplay, initHardware } from "#lib";
 
 // Configure theme with custom default font
 setTheme({
@@ -19,11 +18,12 @@ async function main(): Promise<void> {
   const imageBuffer = await renderApp();
 
   console.log("Render to display");
+  using hardware = await initHardware();
   await renderToDisplay(imageBuffer, { fast: true });
 }
 
 export async function renderApp(): Promise<Buffer> {
-  const canvas = createCanvas(800, 480);
+  const canvas = Canvas.create(800, 480);
   const element = <App />;
   await render(element, canvas);
   return canvas.toPng();

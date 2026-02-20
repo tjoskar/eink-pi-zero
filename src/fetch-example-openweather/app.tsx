@@ -1,29 +1,9 @@
-/**
- * Weather App — JSX component for e-ink display.
- *
- * Layout:
- *   ┌─────────────────────────────────────┐
- *   │ [icon]  15°   💨 5 m/s              │
- *   │                🌅 06:18 / 21:05     │
- *   │                💧 0.5 mm            │
- *   │                ☀️  2 (3, 10 - 14)   │
- *   │                                     │
- *   │  Mon    Tue    Wed    Thu    Fri     │
- *   │  [ic]   [ic]   [ic]   [ic]   [ic]   │
- *   │ 10°/20 11°/19 8°/15  9°/17  12°/22 │
- *   └─────────────────────────────────────┘
- */
-
-import { jsx, Icon, createCanvas, render } from "#jsx/mod.js";
+import { jsx, Icon, Canvas, render } from "#lib";
 import {
   getWeatherDisplayData,
   type WeatherDisplayData,
   type ForecastDay,
 } from "./weather-api.ts";
-
-// ---------------------------------------------------------------------------
-// Detail row icons (Material Icon names)
-// ---------------------------------------------------------------------------
 
 const DETAIL_ICONS = {
   wind: "wind_power",
@@ -31,10 +11,6 @@ const DETAIL_ICONS = {
   rain: "water_drop",
   uv: "wb_iridescent",
 } as const;
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
 
 function DetailRow({ icon, text }: { icon: string; text: string }) {
   return (
@@ -95,10 +71,6 @@ function Forecast({ days }: { days: ForecastDay[] }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Root component
-// ---------------------------------------------------------------------------
-
 function App({ data }: { data: WeatherDisplayData }) {
   return (
     <view
@@ -115,13 +87,9 @@ function App({ data }: { data: WeatherDisplayData }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Render entry point
-// ---------------------------------------------------------------------------
-
 export async function renderApp(): Promise<Buffer> {
   const data = await getWeatherDisplayData();
-  const canvas = createCanvas(800, 480);
+  const canvas = Canvas.create(800, 480);
   await render(<App data={data} />, canvas);
   return canvas.toPng();
 }

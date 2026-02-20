@@ -13,9 +13,6 @@
  *   MQTT_TOPIC_PREFIX  — topic prefix to subscribe to (default: statechange)
  *   WEATHER_API_KEY    — OpenWeatherMap API key
  *   TIBBER_TOKEN       — Tibber API token
- *
- * Run in mock mode:
- *   env $(cat .env | grep -v '^#' | grep -v '^$' | xargs) MOCK=1 pnpm tsx src/home-dashboard/main.ts
  */
 
 import mqtt from "mqtt";
@@ -27,27 +24,16 @@ import {
   EINK_BW_THEME,
   registerFont,
   registerIconFont,
-} from "#jsx/mod.js";
-import { renderToDisplay, cleanup } from "#lib/hardware.ts";
-import { IS_MOCK } from "#lib/env.ts";
-import {
-  setMqttClient,
+  renderToDisplay, cleanup,
+  IS_MOCK,
   setupGlobalErrorHandler,
   logInfo,
   logError,
-} from "#lib/error-handler.ts";
-
-// ---------------------------------------------------------------------------
-// Theme & fonts — must be registered before any rendering
-// ---------------------------------------------------------------------------
+} from "#lib";
 
 setTheme({ ...EINK_BW_THEME, defaultFont: "Noto Sans" });
 registerFont("./fonts/noto-sans-regular.ttf", "Noto Sans");
 registerIconFont();
-
-// ---------------------------------------------------------------------------
-// Config from environment
-// ---------------------------------------------------------------------------
 
 const MQTT_HOST = process.env.MQTT_HOST ?? "localhost";
 const MQTT_PORT = parseInt(process.env.MQTT_PORT ?? "1883", 10);
@@ -61,10 +47,6 @@ const RENDER_DEBOUNCE_MS = 3000;
 /** Periodic refresh interval for weather/electricity/dishes data (1 hour) */
 const REFRESH_INTERVAL_MS = 3_600_000;
 
-// ---------------------------------------------------------------------------
-// Application state
-// ---------------------------------------------------------------------------
-
 const devices: DeviceState[] = DEVICES_CONFIG.map((d) => ({
   label: d.label,
   icon: d.icon,
@@ -74,10 +56,6 @@ const devices: DeviceState[] = DEVICES_CONFIG.map((d) => ({
 let isUpdating = false;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let refreshTimer: ReturnType<typeof setInterval> | null = null;
-
-// ---------------------------------------------------------------------------
-// Display rendering
-// ---------------------------------------------------------------------------
 
 async function updateDisplay(): Promise<void> {
   if (isUpdating) {
@@ -115,10 +93,6 @@ function scheduleUpdate(): void {
     );
   }, RENDER_DEBOUNCE_MS);
 }
-
-// ---------------------------------------------------------------------------
-// MQTT
-// ---------------------------------------------------------------------------
 
 function connectMqtt(): mqtt.MqttClient {
   const url = `mqtt://${MQTT_HOST}:${MQTT_PORT}`;
@@ -171,10 +145,6 @@ function connectMqtt(): mqtt.MqttClient {
   return client;
 }
 
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
-
 async function main(): Promise<void> {
   setupGlobalErrorHandler();
 
@@ -189,7 +159,6 @@ async function main(): Promise<void> {
 
   // Connect MQTT for device status updates
   const client = connectMqtt();
-  setMqttClient(client);
 
   // Periodic refresh for weather/electricity/dishes data
   refreshTimer = setInterval(() => {
@@ -207,10 +176,6 @@ async function main(): Promise<void> {
     console.log();
   }
 }
-
-// ---------------------------------------------------------------------------
-// Shutdown
-// ---------------------------------------------------------------------------
 
 function shutdown(): void {
   logInfo("Shutting down...");

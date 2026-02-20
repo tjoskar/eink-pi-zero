@@ -1,47 +1,16 @@
-/**
- * JSX Render Function
- *
- * Renders a JSX element tree to a canvas.
- *
- * The rendering process has three phases:
- *
- * 1. RESOLVE: Expand component functions into their element trees
- * 2. LAYOUT: Calculate positions using the layout engine
- * 3. DRAW: Render elements to the canvas
- *
- * @example
- * ```typescript
- * import { render } from "./render.ts";
- * import { createCanvas } from "../canvas/index.ts";
- *
- * function App() {
- *   return (
- *     <view padding={20}>
- *       <text font="24px sans-serif">Hello World</text>
- *     </view>
- *   );
- * }
- *
- * const canvas = createCanvas(800, 480);
- * await render(<App />, canvas);
- * ```
- */
-
-import type { Canvas } from "../canvas/types.ts";
-import type { LayoutNode, LayoutResult, LayoutBox } from "../layout/types.ts";
-import { getLayoutEngine } from "../layout/index.ts";
+import type { Canvas } from "./canvas/napi-canvas.ts";
+import type { LayoutNode, LayoutResult, LayoutBox } from "./layout/types.ts";
+import { getLayoutEngine } from "./layout/mod.ts";
 import type {
   JSXElement,
   JSXChildren,
   ComponentFunction,
   LineChartProps,
   TextProps,
-} from "./types.ts";
-import { resolveColor, buildFontString } from "../theme/index.ts";
+} from "./runtime/types.ts";
+import { resolveColor, buildFontString } from "./theme.ts";
 
-// =============================================================================
 // Phase 1: Resolve Components
-// =============================================================================
 
 /**
  * Recursively resolve function components to intrinsic elements.
@@ -114,9 +83,7 @@ function getTextContent(children: JSXChildren | undefined): string {
   return "";
 }
 
-// =============================================================================
 // Phase 2: Build Layout Tree
-// =============================================================================
 
 /**
  * Convert a JSX element tree to a layout node tree.
@@ -167,9 +134,7 @@ function buildLayoutTree(element: JSXElement): LayoutNode {
   };
 }
 
-// =============================================================================
 // Phase 3: Draw to Canvas
-// =============================================================================
 
 /**
  * Draw a line chart to the canvas.
@@ -336,19 +301,13 @@ async function drawElement(
     return;
   }
 
-  // =========================================================================
   // Draw background (applies to all elements)
-  // =========================================================================
-
   if (props.background) {
     canvas.setFillColor(resolveColor(props.background));
     canvas.fillRect(box.x, box.y, box.width, box.height);
   }
 
-  // =========================================================================
   // Draw element-specific content
-  // =========================================================================
-
   switch (type) {
     case "view": {
       // View is just a container - draw children
@@ -419,12 +378,9 @@ async function drawElement(
   }
 }
 
-// =============================================================================
-// Public API
-// =============================================================================
-
 /**
  * Render a JSX element tree to a canvas.
+ * Designed for low-resource environments like Raspberry Pi Zero.
  *
  * This is the main entry point for rendering. It:
  * 1. Resolves all component functions
@@ -438,7 +394,7 @@ async function drawElement(
  *
  * @example
  * ```typescript
- * import { render, createCanvas } from "../lib/mod.ts";
+ * import { render, Canvas } from "./lib/mod.ts";
  *
  * function App() {
  *   return (
@@ -453,7 +409,7 @@ async function drawElement(
  *   );
  * }
  *
- * const canvas = createCanvas(800, 480);
+ * const canvas = new Canvas(800, 480);
  * await render(<App />, canvas);
  *
  * // Save to file or send to display

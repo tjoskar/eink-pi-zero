@@ -1,5 +1,5 @@
 import { beforeAll, test, vi } from "vitest";
-import { jsx, registerFont, registerIconFont, setTheme, EINK_BW_THEME } from "#jsx/mod.js";
+import { registerFont, registerIconFont, setTheme, EINK_BW_THEME } from "#lib";
 import { MOCK_WEATHER } from "./__fixtures__/mock-weather-data.ts";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";

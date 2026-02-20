@@ -1,44 +1,24 @@
 {
   "compilerOptions": {
-    // JSX Configuration
-    // -----------------
     // Use the classic JSX transform with a custom factory
     "jsx": "react",
     "jsxFactory": "jsx",
     "jsxFragmentFactory": "Fragment",
-
-    // Module Configuration
-    // --------------------
-    // Use Node.js ESM resolution
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    // Target modern JavaScript
-    "target": "ES2022",
-
-    // Type Checking
-    // -------------
+    "target": "esnext",
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
-    // Allow .ts extensions in imports (Node 22+ supports this natively)
     "allowImportingTsExtensions": true,
-
-    // Interop
-    // -------
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-
-    // Path Resolution
-    // ---------------
     "baseUrl": ".",
     "paths": {
-      "@jsx/*": ["./jsx/lib/*"],
-      "#lib/*": ["./lib/*"],
-      "#jsx/*": ["./jsx/lib/*"]
+      "#lib": ["./lib/mod.ts"],
     }
   },
   "include": [
-    "jsx/**/*",
     "lib/**/*",
     "src/**/*"
   ],

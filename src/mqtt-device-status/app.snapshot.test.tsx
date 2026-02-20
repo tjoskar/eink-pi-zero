@@ -1,5 +1,5 @@
 import { beforeAll, test } from "vitest";
-import { jsx, registerFont, registerIconFont, setTheme, EINK_BW_THEME } from "#jsx/mod.js";
+import { jsx, registerFont, registerIconFont, setTheme, EINK_BW_THEME } from "#lib";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertSnapshot } from "../../test/snapshot-utils.ts";

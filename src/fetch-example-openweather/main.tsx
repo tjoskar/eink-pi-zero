@@ -18,16 +18,14 @@
  */
 
 import { renderApp } from "./app.tsx";
-import { renderToDisplay } from "#lib/hardware.ts";
 import {
-  jsx,
+  renderToDisplay,
   registerFont,
   registerIconFont,
   setTheme,
   EINK_BW_THEME,
-} from "#jsx/mod.js";
+} from "#lib";
 
-// Theme & fonts
 setTheme({ ...EINK_BW_THEME, defaultFont: "Noto Sans" });
 registerFont("./fonts/noto-sans-regular.ttf", "Noto Sans");
 registerIconFont();

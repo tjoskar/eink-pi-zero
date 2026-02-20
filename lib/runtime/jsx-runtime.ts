@@ -18,8 +18,6 @@
  *
  * Becomes:
  *   jsx("view", null, jsx("text", null, "A"), jsx("text", null, "B"))
- *
- * Note: The classic transform passes children as separate arguments after props!
  */
 
 import type { JSXElement, ComponentFunction, JSXChildren } from "./types.ts";
@@ -93,11 +91,3 @@ export function Fragment({ children }: { children?: JSXChildren }): JSXElement {
     props: { children },
   };
 }
-
-// Re-export types for consumers
-export type {
-  JSXElement,
-  JSXChildren,
-  JSXChild,
-  ComponentFunction,
-} from "./types.ts";

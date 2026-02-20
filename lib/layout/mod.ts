@@ -29,14 +29,16 @@ export type {
 } from "./types.ts";
 export { YogaLayoutEngine } from "./yoga-engine.ts";
 
-// Default engine instance (yoga-layout)
-let currentEngine: LayoutEngine = new YogaLayoutEngine();
+let currentEngine: LayoutEngine | null = null;
 
 /**
  * Get the current layout engine.
  * Returns YogaLayoutEngine by default.
  */
 export function getLayoutEngine(): LayoutEngine {
+  if (!currentEngine) {
+    currentEngine = new YogaLayoutEngine();
+  }
   return currentEngine;
 }
 

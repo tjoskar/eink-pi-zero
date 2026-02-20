@@ -1,4 +1,4 @@
-import { jsx } from "#jsx/mod.js";
+import { jsx } from "#lib";
 
 export function App() {
   return (

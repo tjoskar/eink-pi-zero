@@ -2,7 +2,7 @@
  * Garbage collection section — upcoming pickup dates.
  */
 
-import { jsx } from "#jsx/mod.js";
+import { jsx } from "#lib";
 import type { GarbageData } from "../data/garbage-data.ts";
 
 export function GarbageSection({ data }: { data: GarbageData }) {

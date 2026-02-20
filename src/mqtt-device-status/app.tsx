@@ -8,13 +8,13 @@
 import {
   jsx,
   Icon,
-  createCanvas,
+  Canvas,
   render,
   registerFont,
   registerIconFont,
   setTheme,
   EINK_BW_THEME,
-} from "#jsx/mod.js";
+} from "#lib";
 
 // Configure theme and fonts before any rendering
 setTheme({ ...EINK_BW_THEME, defaultFont: "Noto Sans" });
@@ -58,7 +58,7 @@ function App({ devices }: { devices: DeviceState[] }) {
  * Render the device status display to a PNG buffer.
  */
 export async function renderApp(devices: DeviceState[]): Promise<Buffer> {
-  const canvas = createCanvas(800, 480);
+  const canvas = new Canvas(800, 480);
   await render(<App devices={devices} />, canvas);
   return canvas.toPng();
 }

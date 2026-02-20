@@ -5,7 +5,7 @@
  * (outlined rectangles) for daily consumption.
  */
 
-import { jsx, LineChart } from "#jsx/mod.js";
+import { jsx, LineChart } from "#lib";
 import type { ElectricityData } from "../data/electricity-api.ts";
 
 // ---------------------------------------------------------------------------

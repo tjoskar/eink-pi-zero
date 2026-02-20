@@ -7,7 +7,7 @@
  *   Right  — electricity (price chart + consumption), garbage, last-update
  */
 
-import { jsx, createCanvas, render } from "#jsx/mod.js";
+import { jsx, Canvas, render } from "#lib";
 import { DeviceColumn, type DeviceState } from "./components/devices.tsx";
 import { WeatherSection } from "./components/weather.tsx";
 import { ElectricitySection } from "./components/electricity.tsx";
@@ -25,10 +25,6 @@ import {
 import { getDishes } from "./data/dishes-api.ts";
 import { getGarbageData, type GarbageData } from "./data/garbage-data.ts";
 
-// ---------------------------------------------------------------------------
-// Data interface
-// ---------------------------------------------------------------------------
-
 interface DashboardData {
   devices: DeviceState[];
   weather: WeatherDisplayData | null;
@@ -36,10 +32,6 @@ interface DashboardData {
   dishes: string[];
   garbage: GarbageData;
 }
-
-// ---------------------------------------------------------------------------
-// Root component
-// ---------------------------------------------------------------------------
 
 function App({ data }: { data: DashboardData }) {
   return (
@@ -73,13 +65,8 @@ function App({ data }: { data: DashboardData }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Data fetching
-// ---------------------------------------------------------------------------
-
 /**
  * Fetch all dashboard data in parallel.
- *
  * Each remote fetch is wrapped in try/catch so a single failure doesn't
  * bring down the whole dashboard — failed sections render fallback UIs.
  */
@@ -119,16 +106,12 @@ export async function fetchAllData(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Render entry point
-// ---------------------------------------------------------------------------
-
 /**
  * Fetch all data and render the full dashboard to a PNG buffer.
  */
 export async function renderApp(devices: DeviceState[]): Promise<Buffer> {
   const data = await fetchAllData(devices);
-  const canvas = createCanvas(800, 480);
+  const canvas = new Canvas(800, 480);
   await render(<App data={data} />, canvas);
   return canvas.toPng();
 }

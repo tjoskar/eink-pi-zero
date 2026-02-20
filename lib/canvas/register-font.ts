@@ -4,12 +4,9 @@
  * Provides functions for registering custom fonts with the canvas.
  * Fonts must be registered before creating a canvas that uses them.
  *
- * Uses @napi-rs/canvas GlobalFonts API which has prebuilt binaries
- * (no native compilation needed).
- *
  * @example Basic usage
  * ```typescript
- * import { registerFont, registerIconFont } from "./index.ts";
+ * import { registerFont, registerIconFont } from "./mod.ts";
  *
  * // Register a custom font
  * registerFont("./fonts/noto-sans-regular.ttf", "Noto Sans");
@@ -37,14 +34,6 @@ import { GlobalFonts } from "@napi-rs/canvas";
 import * as path from "node:path";
 import * as fs from "node:fs";
 
-/** Font style options (kept for API compatibility, but not used by @napi-rs/canvas) */
-export interface FontOptions {
-  /** Font weight: "normal", "bold", or numeric (100-900) */
-  weight?: string;
-  /** Font style: "normal", "italic", "oblique" */
-  style?: string;
-}
-
 /** Name of the icon font family */
 export const ICON_FONT_FAMILY = "Material Icons";
 
@@ -54,16 +43,10 @@ const DEFAULT_ICON_FONT_PATH = "./fonts/material-icons.woff";
 /**
  * Register a font file for use with canvas.
  *
- * The font file must be a TrueType (.ttf) or OpenType (.otf) font.
- * WOFF/WOFF2 fonts are also supported.
- *
- * Note: @napi-rs/canvas uses GlobalFonts.registerFromPath which doesn't
- * support weight/style options directly. Use different family names for
- * different weights (e.g., "Roboto-Bold").
+ * The font file must be a TrueType (.ttf), OpenType (.otf) font or a WOFF/WOFF2 font.
  *
  * @param fontPath - Path to the font file
  * @param family - Font family name to use in CSS font strings
- * @param _options - Kept for API compatibility (not used)
  *
  * @throws Error if the font file does not exist
  *
@@ -79,7 +62,6 @@ const DEFAULT_ICON_FONT_PATH = "./fonts/material-icons.woff";
 export function registerFont(
   fontPath: string,
   family: string,
-  _options: FontOptions = {},
 ): void {
   const resolvedPath = path.resolve(fontPath);
 

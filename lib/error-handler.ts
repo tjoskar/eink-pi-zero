@@ -4,28 +4,21 @@
  * Logs errors to both console and a log file,
  * and optionally publishes to MQTT topic.
  */
-
 import { appendFileSync, mkdirSync, existsSync } from "node:fs";
-import { dirname, join } from "node:path";
-import type { MqttClient } from "mqtt";
+import EventEmitter from 'node:events';
+import { join } from "node:path";
+import { getConfig } from "./config.ts";
 
-/** MQTT error topic */
-const ERROR_TOPIC = "control-panel/error";
-
-/** Log file path */
-const LOG_DIR = join(process.env.HOME ?? "/tmp", "control-panel", "logs");
-const LOG_FILE = join(LOG_DIR, "eink-panel.log");
-
-/** MQTT client reference (set by application) */
-let mqttClient: MqttClient | null = null;
+export const logEmitter = new EventEmitter<Record<'log' | 'warn' | 'error', [message: string]>>();
 
 /**
  * Ensure log directory exists.
  */
 function ensureLogDir(): void {
-  if (!existsSync(LOG_DIR)) {
+  const logDir = getConfig().logPath;
+  if (!existsSync(logDir)) {
     try {
-      mkdirSync(LOG_DIR, { recursive: true });
+      mkdirSync(logDir, { recursive: true });
     } catch {
       // Ignore errors
     }
@@ -53,21 +46,13 @@ function formatLogMessage(
  */
 function writeToLog(message: string): void {
   ensureLogDir();
+  const logFile = join(getConfig().logPath, "eink-panel.log");
   try {
-    appendFileSync(LOG_FILE, message + "\n");
+    appendFileSync(logFile, message + "\n");
   } catch (err) {
     // Can't log to file, just console
     console.error("[error-handler] Failed to write to log file:", err);
   }
-}
-
-/**
- * Set the MQTT client for error publishing.
- *
- * @param client - MQTT client instance
- */
-export function setMqttClient(client: MqttClient): void {
-  mqttClient = client;
 }
 
 /**
@@ -77,6 +62,7 @@ export function logInfo(message: string): void {
   const formatted = formatLogMessage("INFO", message);
   console.log(formatted);
   writeToLog(formatted);
+  logEmitter.emit('log', message);
 }
 
 /**
@@ -86,6 +72,7 @@ export function logWarn(message: string): void {
   const formatted = formatLogMessage("WARN", message);
   console.warn(formatted);
   writeToLog(formatted);
+  logEmitter.emit('warn', message);
 }
 
 /**
@@ -103,27 +90,7 @@ export function logError(
   const formatted = formatLogMessage("ERROR", message, error);
   console.error(formatted);
   writeToLog(formatted);
-
-  // Publish to MQTT if connected
-  if (publishToMqtt && mqttClient?.connected) {
-    const payload = JSON.stringify({
-      timestamp: new Date().toISOString(),
-      source: "eink-panel",
-      message,
-      stack: error?.stack,
-    });
-
-    mqttClient.publish(
-      ERROR_TOPIC,
-      payload,
-      { qos: 1 },
-      (err: Error | undefined) => {
-        if (err) {
-          console.error("[error-handler] Failed to publish to MQTT:", err);
-        }
-      },
-    );
-  }
+  logEmitter.emit('error', message);
 }
 
 /**
@@ -142,11 +109,4 @@ export function setupGlobalErrorHandler(): void {
   });
 
   logInfo("Global error handler initialized");
-}
-
-/**
- * Get the log file path.
- */
-export function getLogFilePath(): string {
-  return LOG_FILE;
 }

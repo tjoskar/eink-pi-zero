@@ -2,7 +2,7 @@
  * Last update timestamp — shows current time in HH:MM:SS format.
  */
 
-import { jsx } from "#jsx/mod.js";
+import { jsx } from "#lib";
 
 export function LastUpdate() {
   const now = new Date();

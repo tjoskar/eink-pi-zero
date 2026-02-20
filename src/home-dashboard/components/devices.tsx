@@ -5,7 +5,7 @@
  * matching the mqtt-device-status pattern.
  */
 
-import { jsx, Icon } from "#jsx/mod.js";
+import { jsx, Icon } from "#lib";
 
 export interface DeviceState {
   label: string;

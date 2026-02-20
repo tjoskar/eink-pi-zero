@@ -2,7 +2,7 @@
  * Dishes section — weekly meal plan as a bulleted list.
  */
 
-import { jsx } from "#jsx/mod.js";
+import { jsx } from "#lib";
 
 export function DishesSection({ dishes }: { dishes: string[] }) {
   if (dishes.length === 0) {

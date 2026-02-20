@@ -45,7 +45,7 @@ export interface IconProps {
 /**
  * Icon component that renders Material Icons.
  *
- * Available icons are defined in icons.ts. To add more icons:
+ * Available icons are defined in icons-name.ts. To add more icons:
  * 1. Find the icon at https://fonts.google.com/icons
  * 2. Get the codepoint (e.g., "e88a" for home)
  * 3. Add to ICON_CODEPOINTS: `myIcon: "\ue88a"`

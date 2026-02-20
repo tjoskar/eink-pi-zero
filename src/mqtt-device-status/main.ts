@@ -19,18 +19,9 @@
 import mqtt from "mqtt";
 import { renderApp, type DeviceState } from "./app.tsx";
 import { DEVICES_CONFIG } from "./devices.ts";
-import { renderToDisplay, cleanup } from "#lib/hardware.ts";
-import { IS_MOCK } from "#lib/env.ts";
-import {
-  setMqttClient,
-  setupGlobalErrorHandler,
+import { IS_MOCK, renderToDisplay, cleanup, setupGlobalErrorHandler,
   logInfo,
-  logError,
-} from "#lib/error-handler.ts";
-
-// ---------------------------------------------------------------------------
-// Config from environment
-// ---------------------------------------------------------------------------
+  logError, } from "#lib";
 
 const MQTT_HOST = process.env.MQTT_HOST ?? "localhost";
 const MQTT_PORT = parseInt(process.env.MQTT_PORT ?? "1883", 10);
@@ -41,10 +32,6 @@ const MQTT_TOPIC_PREFIX = process.env.MQTT_TOPIC_PREFIX ?? "statechange";
 /** Debounce delay in ms to batch rapid MQTT messages before rendering */
 const RENDER_DEBOUNCE_MS = 3000;
 
-// ---------------------------------------------------------------------------
-// Application state
-// ---------------------------------------------------------------------------
-
 const devices: DeviceState[] = DEVICES_CONFIG.map((d) => ({
   label: d.label,
   icon: d.icon,
@@ -53,10 +40,6 @@ const devices: DeviceState[] = DEVICES_CONFIG.map((d) => ({
 
 let isUpdating = false;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-
-// ---------------------------------------------------------------------------
-// Display rendering
-// ---------------------------------------------------------------------------
 
 async function updateDisplay(): Promise<void> {
   if (isUpdating) {
@@ -94,10 +77,6 @@ function scheduleUpdate(): void {
     );
   }, RENDER_DEBOUNCE_MS);
 }
-
-// ---------------------------------------------------------------------------
-// MQTT
-// ---------------------------------------------------------------------------
 
 function connectMqtt(): mqtt.MqttClient {
   const url = `mqtt://${MQTT_HOST}:${MQTT_PORT}`;
@@ -150,10 +129,6 @@ function connectMqtt(): mqtt.MqttClient {
   return client;
 }
 
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
-
 async function main(): Promise<void> {
   setupGlobalErrorHandler();
 
@@ -168,7 +143,6 @@ async function main(): Promise<void> {
 
   // Connect MQTT
   const client = connectMqtt();
-  setMqttClient(client);
 
   if (IS_MOCK) {
     console.log();
@@ -178,10 +152,6 @@ async function main(): Promise<void> {
     console.log();
   }
 }
-
-// ---------------------------------------------------------------------------
-// Shutdown
-// ---------------------------------------------------------------------------
 
 function shutdown(): void {
   logInfo("Shutting down...");

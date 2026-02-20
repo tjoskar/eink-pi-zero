@@ -26,10 +26,6 @@
  * ```
  */
 
-// =============================================================================
-// Color Palette Types
-// =============================================================================
-
 /**
  * Standard e-ink black & white colors.
  * 4 grayscale levels: black (0), darkGray (85), lightGray (170), white (255)
@@ -105,10 +101,6 @@ export const EINK_COLOR_THEME: Theme<EinkColorPalette> = {
     orange: "#FFA500",
   },
 };
-
-// =============================================================================
-// Global Theme State
-// =============================================================================
 
 let currentTheme: Theme<string> = EINK_BW_THEME;
 

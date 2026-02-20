@@ -16,10 +16,6 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { getWeatherIconName } from "./weather-icons.ts";
 
-// ---------------------------------------------------------------------------
-// Config
-// ---------------------------------------------------------------------------
-
 const API_KEY = process.env.WEATHER_API_KEY ?? "";
 const LAT = process.env.WEATHER_LAT ?? "59.3293";
 const LON = process.env.WEATHER_LON ?? "18.0686";
@@ -32,10 +28,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const CACHE_FILE = join(__dirname, "weather_cache.json");
 
 const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 export interface CurrentWeather {
   temp: string;
@@ -56,10 +48,6 @@ export interface WeatherDisplayData {
   current: CurrentWeather;
   forecast: ForecastDay[];
 }
-
-// ---------------------------------------------------------------------------
-// Cache
-// ---------------------------------------------------------------------------
 
 interface CacheEnvelope {
   timestamp: number;
@@ -89,12 +77,6 @@ function writeCache(data: Record<string, unknown>): void {
     console.log("Cache write error:", e);
   }
 }
-
-// ---------------------------------------------------------------------------
-// API fetch
-// ---------------------------------------------------------------------------
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 async function fetchFromApi(): Promise<Record<string, any>> {
   const url =
@@ -143,10 +125,6 @@ async function fetchWeatherData(): Promise<Record<string, any>> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Data helpers
-// ---------------------------------------------------------------------------
-
 function getRainTotal(data: Record<string, any>): number {
   const current = data.current ?? {};
   const now = new Date((current.dt ?? Date.now() / 1000) * 1000);
@@ -193,10 +171,6 @@ function getUvInfo(data: Record<string, any>): string {
   const maxH = Math.max(...highUvHours);
   return `${Math.round(currentUv)} (${Math.round(maxUv)}, ${minH} - ${maxH})`;
 }
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
 
 export async function getWeatherDisplayData(): Promise<WeatherDisplayData> {
   const data = await fetchWeatherData();

@@ -5,7 +5,7 @@
  * big icon (108px) + temp (64px font) + detail column, then forecast row.
  */
 
-import { jsx, Icon } from "#jsx/mod.js";
+import { jsx, Icon } from "#lib";
 import type {
   WeatherDisplayData,
   ForecastDay,

@@ -15,7 +15,7 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createInterface, Interface } from "node:readline";
-import { IS_MOCK } from "./env.js";
+import { IS_MOCK } from "./env.ts";
 
 /** Timeout for GPIO commands (ms) */
 const GPIO_COMMAND_TIMEOUT_MS = 5_000;
@@ -62,16 +62,9 @@ const pendingCommands = new Map<
   }
 >();
 
-/** Whether daemon is ready */
-let daemonReady = false;
-
 /** Promise that resolves when daemon is ready */
 let daemonReadyPromise: Promise<void> | null = null;
 let daemonReadyResolve: (() => void) | null = null;
-
-// =============================================================================
-// Internal IPC
-// =============================================================================
 
 /**
  * Send a command to the daemon.
@@ -125,7 +118,6 @@ function handleDaemonMessage(line: string): void {
     // Handle ready event
     if (msg.event === "ready") {
       console.log("[hardware] Daemon ready");
-      daemonReady = true;
       daemonReadyResolve?.();
       return;
     }
@@ -173,16 +165,12 @@ function handleDaemonMessage(line: string): void {
   }
 }
 
-// =============================================================================
-// Daemon Lifecycle
-// =============================================================================
-
 /**
  * Start the hardware daemon process.
  *
  * Must be called before using any hardware functions (except in mock mode).
  */
-export async function startHardwareDaemon(): Promise<void> {
+async function startHardwareDaemon(): Promise<void> {
   if (IS_MOCK) {
     console.log("[hardware] Mock mode - daemon not started");
     setupMockButton();
@@ -227,7 +215,6 @@ export async function startHardwareDaemon(): Promise<void> {
     console.log(`[hardware] Daemon exited with code ${code}`);
     daemonProcess = null;
     daemonReader = null;
-    daemonReady = false;
   });
 
   // Wait for ready event
@@ -283,7 +270,7 @@ function setupMockButton(): void {
 /**
  * Clean up hardware resources.
  */
-export function cleanup(): void {
+function cleanup(): void {
   if (daemonProcess) {
     console.log("[hardware] Stopping daemon");
     try {
@@ -301,7 +288,6 @@ export function cleanup(): void {
   }
 
   daemonReader = null;
-  daemonReady = false;
   buttonCallbacks.clear();
 
   // Clear pending commands
@@ -315,10 +301,6 @@ export function cleanup(): void {
     process.stdin.setRawMode(false);
   }
 }
-
-// =============================================================================
-// GPIO: Buttons
-// =============================================================================
 
 /**
  * Subscribe to button press events on a pin.
@@ -347,10 +329,6 @@ export async function onButtonPress(
   }
 }
 
-// =============================================================================
-// GPIO: LED
-// =============================================================================
-
 /**
  * Set LED state.
  *
@@ -365,10 +343,6 @@ export async function setLed(pin: number, on: boolean): Promise<void> {
 
   await sendCommandWithResponse({ cmd: "led", pin, on });
 }
-
-// =============================================================================
-// Display: E-ink Rendering
-// =============================================================================
 
 /**
  * Render a PNG buffer to the e-ink display.
@@ -407,17 +381,39 @@ export async function renderToDisplay(
   console.log("[hardware] Render complete");
 }
 
-// =============================================================================
-// Process Cleanup
-// =============================================================================
+/** Hardware daemon handle for use with `using` keyword */
+export interface HardwareHandle extends Disposable {
+  /** Manually clean up resources (same as letting handle go out of scope) */
+  cleanup: typeof cleanup;
+}
 
-// Clean up on process exit
-process.on("SIGINT", () => {
-  cleanup();
-  process.exit(0);
-});
-
-process.on("SIGTERM", () => {
-  cleanup();
-  process.exit(0);
-});
+/**
+ * Start the hardware daemon and return a disposable handle.
+ *
+ * Use with `using` for automatic cleanup on scope exit:
+ * ```ts
+ * async function main() {
+ *   using hardware = await initHardware();
+ *   // ... app code ...
+ * } // cleanup() called automatically when scope exits
+ * ```
+ *
+ * Note: `using` does NOT handle SIGINT/SIGTERM - add signal handlers in entry point:
+ * ```ts
+ * async function main() {
+ *   using hardware = await initHardware();
+ *   await Promise.race([
+ *     once(process, "SIGINT"),
+ *     once(process, "SIGTERM"),
+ *     once(process, "SIGHUP"),
+ *   ]);
+ * }
+ * ```
+ */
+export async function initHardware(): Promise<HardwareHandle> {
+  await startHardwareDaemon();
+  return {
+    cleanup,
+    [Symbol.dispose]: cleanup,
+  };
+}

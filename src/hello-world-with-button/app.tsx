@@ -7,7 +7,7 @@
  * - Button press counter
  */
 
-import { jsx, Fragment, render, createCanvas, registerFont, setTheme, EINK_BW_THEME } from "#jsx/mod.js";
+import { jsx, render, Canvas, registerFont, setTheme, EINK_BW_THEME } from "#lib";
 
 // Configure theme with custom default font
 setTheme({
@@ -96,7 +96,7 @@ export function App({ buttonPresses, lastUpdate }: AppProps) {
  * Render the app to a PNG buffer.
  */
 export async function renderApp(props: AppProps): Promise<Buffer> {
-  const canvas = createCanvas(800, 480);
+  const canvas = new Canvas(800, 480);
   const element = <App {...props} />;
   await render(element, canvas);
   return canvas.toPng();
