@@ -240,11 +240,17 @@ function setupMockButton(): void {
   process.stdin.setEncoding("utf8");
 
   process.stdin.on("data", (key: string) => {
-    // Ctrl+C to exit
+    // Ctrl+C — restore terminal and emit SIGINT locally so the normal
+    // signal handling (Promise.race + using) takes over and runs full
+    // cleanup. We use process.emit() instead of process.kill(0, ...) to
+    // avoid signaling the parent (tsx --watch) before cleanup completes.
+    // After cleanup, raw mode is off so a second Ctrl+C exits tsx normally.
     if (key === "\u0003") {
-      console.log("\n[hardware] Exiting...");
-      cleanup();
-      process.exit();
+      if (process.stdin.isTTY) {
+        process.stdin.setRawMode(false);
+      }
+      process.emit("SIGINT");
+      return;
     }
 
     // 'b' for button - trigger all registered callbacks
@@ -271,6 +277,7 @@ function setupMockButton(): void {
  * Clean up hardware resources.
  */
 function cleanup(): void {
+  console.log("[hardware] Cleaning up resources...");
   if (daemonProcess) {
     console.log("[hardware] Stopping daemon");
     try {
@@ -278,15 +285,12 @@ function cleanup(): void {
     } catch {
       // Ignore errors when sending shutdown
     }
-    // Give it a moment to clean up, then kill
-    setTimeout(() => {
-      if (daemonProcess) {
-        daemonProcess.kill("SIGTERM");
-        daemonProcess = null;
-      }
-    }, 100);
+    // No need to force-kill: when this process exits, the daemon's
+    // stdin pipe closes → it sees EOF → breaks its loop → runs cleanup.
+    daemonProcess = null;
   }
 
+  daemonReader?.close();
   daemonReader = null;
   buttonCallbacks.clear();
 
@@ -296,9 +300,13 @@ function cleanup(): void {
   }
   pendingCommands.clear();
 
-  // Restore terminal if in mock mode
-  if (IS_MOCK && process.stdin.isTTY) {
-    process.stdin.setRawMode(false);
+  // Restore terminal and release stdin in mock mode
+  if (IS_MOCK) {
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode(false);
+    }
+    process.stdin.pause();
+    process.stdin.removeAllListeners("data");
   }
 }
 

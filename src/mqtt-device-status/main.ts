@@ -19,9 +19,12 @@
 import mqtt from "mqtt";
 import { renderApp, type DeviceState } from "./app.tsx";
 import { DEVICES_CONFIG } from "./devices.ts";
-import { IS_MOCK, renderToDisplay, cleanup, setupGlobalErrorHandler,
+import {
+  IS_MOCK, renderToDisplay, setupGlobalErrorHandler, initHardware,
   logInfo,
-  logError, } from "#lib";
+  logError,
+} from "#lib";
+import { once } from "node:events";
 
 const MQTT_HOST = process.env.MQTT_HOST ?? "localhost";
 const MQTT_PORT = parseInt(process.env.MQTT_PORT ?? "1883", 10);
@@ -131,37 +134,21 @@ function connectMqtt(): mqtt.MqttClient {
 
 async function main(): Promise<void> {
   setupGlobalErrorHandler();
-
-  console.log("╔════════════════════════════════════════╗");
-  console.log("║     MQTT Device Status Display         ║");
-  console.log("╚════════════════════════════════════════╝");
-  console.log();
+  using _hardware = await initHardware();
 
   // Initial render
   logInfo("Rendering initial state (all devices off)...");
   await updateDisplay();
 
   // Connect MQTT
-  const client = connectMqtt();
+  connectMqtt();
 
-  if (IS_MOCK) {
-    console.log();
-    console.log("Running in mock mode:");
-    console.log("  • Images saved to ./preview.png");
-    console.log("  • Press Ctrl+C to exit");
-    console.log();
-  }
+  await Promise.race([
+    once(process, "SIGINT"),
+    once(process, "SIGTERM"),
+    once(process, "SIGHUP"),
+  ]);
 }
-
-function shutdown(): void {
-  logInfo("Shutting down...");
-  if (debounceTimer) clearTimeout(debounceTimer);
-  cleanup();
-  process.exit(0);
-}
-
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
 
 main().catch((error) => {
   logError("Fatal error", error instanceof Error ? error : undefined);

@@ -77,11 +77,6 @@ function handleButtonPress(): void {
  * Main entry point.
  */
 async function main(): Promise<void> {
-  console.log("╔════════════════════════════════════════╗");
-  console.log("║       E-Ink Hello World Example        ║");
-  console.log("╚════════════════════════════════════════╝");
-  console.log();
-
   // Start hardware daemon
   using _hardware = await initHardware();
 

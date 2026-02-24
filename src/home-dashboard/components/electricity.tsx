@@ -8,10 +8,6 @@
 import { jsx, LineChart } from "#lib";
 import type { ElectricityData } from "../data/electricity-api.ts";
 
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
 function ConsumptionBar({
   value,
   maxValue,
@@ -72,10 +68,6 @@ function ConsumptionChart({ data }: { data: ElectricityData }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Exported section
-// ---------------------------------------------------------------------------
-
 export function ElectricitySection({
   data,
 }: {
@@ -95,7 +87,7 @@ export function ElectricitySection({
     <view direction="column" gap={8} width={260}>
       {/* Price title */}
       <text size={14} color="black">
-        Elpris ({data.levelLabel} {data.currentPrice} \u00f6re)
+        Elpris ({data.levelLabel} {data.currentPrice} öre/kWh)
       </text>
 
       {/* Price line chart */}
@@ -110,7 +102,7 @@ export function ElectricitySection({
       {/* Consumption title */}
       <view height={8} />
       <text size={14} color="black">
-        F\u00f6rbrukning (kWh, kr)
+        Förbrukning (kWh, kr)
       </text>
 
       {/* Consumption bar chart */}

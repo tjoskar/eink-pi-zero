@@ -7,7 +7,6 @@
 import { appendFileSync, mkdirSync, existsSync } from "node:fs";
 import EventEmitter from 'node:events';
 import { join } from "node:path";
-import { getConfig } from "./config.ts";
 
 export const logEmitter = new EventEmitter<Record<'log' | 'warn' | 'error', [message: string]>>();
 
@@ -15,7 +14,7 @@ export const logEmitter = new EventEmitter<Record<'log' | 'warn' | 'error', [mes
  * Ensure log directory exists.
  */
 function ensureLogDir(): void {
-  const logDir = getConfig().logPath;
+  const logDir = process.env.LOG_PATH || "./logs";
   if (!existsSync(logDir)) {
     try {
       mkdirSync(logDir, { recursive: true });
@@ -46,7 +45,7 @@ function formatLogMessage(
  */
 function writeToLog(message: string): void {
   ensureLogDir();
-  const logFile = join(getConfig().logPath, "eink-panel.log");
+  const logFile = join(process.env.LOG_PATH || "./logs", "eink-panel.log");
   try {
     appendFileSync(logFile, message + "\n");
   } catch (err) {

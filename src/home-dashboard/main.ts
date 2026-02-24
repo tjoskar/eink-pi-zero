@@ -4,17 +4,7 @@
  * Combines MQTT device status with periodic data refreshes (weather,
  * electricity prices, dishes, garbage schedule) to drive a single
  * e-ink dashboard display.
- *
- * Required env vars:
- *   MQTT_HOST          — broker hostname
- *   MQTT_PORT          — broker port (default: 1883)
- *   MQTT_USER          — broker username
- *   MQTT_PASS          — broker password
- *   MQTT_TOPIC_PREFIX  — topic prefix to subscribe to (default: statechange)
- *   WEATHER_API_KEY    — OpenWeatherMap API key
- *   TIBBER_TOKEN       — Tibber API token
  */
-
 import mqtt from "mqtt";
 import { renderApp } from "./app.tsx";
 import { DEVICES_CONFIG } from "../mqtt-device-status/devices.ts";
@@ -24,22 +14,26 @@ import {
   EINK_BW_THEME,
   registerFont,
   registerIconFont,
-  renderToDisplay, cleanup,
-  IS_MOCK,
+  renderToDisplay,
   setupGlobalErrorHandler,
   logInfo,
   logError,
+  initHardware,
 } from "#lib";
+import { once } from "node:events";
 
 setTheme({ ...EINK_BW_THEME, defaultFont: "Noto Sans" });
 registerFont("./fonts/noto-sans-regular.ttf", "Noto Sans");
 registerIconFont();
 
-const MQTT_HOST = process.env.MQTT_HOST ?? "localhost";
-const MQTT_PORT = parseInt(process.env.MQTT_PORT ?? "1883", 10);
-const MQTT_USER = process.env.MQTT_USER;
-const MQTT_PASS = process.env.MQTT_PASS;
-const MQTT_TOPIC_PREFIX = process.env.MQTT_TOPIC_PREFIX ?? "statechange";
+const MQTT_HOST = process.env.MQTT_HOST;
+const MQTT_PORT = Number(process.env.MQTT_PORT);
+const MQTT_USER = process.env.MQTT_USERNAME;
+const MQTT_PASS = process.env.MQTT_PASSWORD;
+const MQTT_TOPIC_PREFIX = process.env.MQTT_TOPIC_PREFIX;
+if (!MQTT_USER || !MQTT_PASS || !MQTT_TOPIC_PREFIX || !MQTT_HOST || !MQTT_PORT) {
+  throw new Error("Missing required MQTT environment variables");
+}
 
 /** Debounce delay in ms to batch rapid MQTT messages before rendering */
 const RENDER_DEBOUNCE_MS = 3000;
@@ -54,8 +48,89 @@ const devices: DeviceState[] = DEVICES_CONFIG.map((d) => ({
 }));
 
 let isUpdating = false;
-let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-let refreshTimer: ReturnType<typeof setInterval> | null = null;
+
+/** Disposable wrapper around a debounced update timer. */
+function createDebouncedUpdater(): {
+  schedule: () => void;
+  [Symbol.dispose]: () => void;
+} {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  return {
+    schedule() {
+      timer?.[Symbol.dispose]();
+      timer = setTimeout(() => {
+        timer = null;
+        updateDisplay().catch((err) =>
+          logError("Render error", err instanceof Error ? err : undefined),
+        );
+      }, RENDER_DEBOUNCE_MS);
+    },
+    [Symbol.dispose]() {
+      timer?.[Symbol.dispose]();
+      timer = null;
+    },
+  };
+}
+
+/** Disposable wrapper around an MQTT client with async disconnect. */
+function connectMqtt(
+  scheduleUpdate: () => void,
+): { client: mqtt.MqttClient } & AsyncDisposable {
+  const url = `mqtt://${MQTT_HOST}:${MQTT_PORT}`;
+  logInfo(`Connecting to MQTT broker at ${url}...`);
+
+  const client = mqtt.connect(url, {
+    username: MQTT_USER,
+    password: MQTT_PASS,
+  });
+
+  client.on("connect", () => {
+    const topic = `${MQTT_TOPIC_PREFIX}/#`;
+    logInfo(`Connected to MQTT broker. Subscribing to ${topic}`);
+    client.subscribe(topic);
+  });
+
+  client.on("message", (_topic: string, payload: Buffer) => {
+    const value = payload.toString().toLowerCase();
+    const isOn = value === "on";
+    const isOff = value === "off";
+
+    if (!isOn && !isOff) return;
+
+    const configIndex = DEVICES_CONFIG.findIndex((d) => d.topic === _topic);
+    if (configIndex === -1) return;
+
+    const device = devices[configIndex];
+    const newState = isOn;
+
+    if (device.on === newState) return;
+
+    device.on = newState;
+    logInfo(`${device.label}: ${newState ? "ON" : "OFF"}`);
+    scheduleUpdate();
+  });
+
+  client.on("error", (err) => {
+    logError("MQTT error", err);
+  });
+
+  client.on("offline", () => {
+    logInfo("MQTT client offline");
+  });
+
+  client.on("reconnect", () => {
+    logInfo("MQTT reconnecting...");
+  });
+
+  return {
+    client,
+    async [Symbol.asyncDispose]() {
+      logInfo("Disconnecting MQTT...");
+      await client.endAsync();
+    },
+  };
+}
 
 async function updateDisplay(): Promise<void> {
   if (isUpdating) {
@@ -78,115 +153,32 @@ async function updateDisplay(): Promise<void> {
   }
 }
 
-/**
- * Schedule a debounced display update. Resets the timer on each call
- * so rapid messages (e.g. retained messages on connect) are batched.
- */
-function scheduleUpdate(): void {
-  if (debounceTimer) {
-    clearTimeout(debounceTimer);
-  }
-  debounceTimer = setTimeout(() => {
-    debounceTimer = null;
-    updateDisplay().catch((err) =>
-      logError("Render error", err instanceof Error ? err : undefined),
-    );
-  }, RENDER_DEBOUNCE_MS);
-}
-
-function connectMqtt(): mqtt.MqttClient {
-  const url = `mqtt://${MQTT_HOST}:${MQTT_PORT}`;
-  logInfo(`Connecting to MQTT broker at ${url}...`);
-
-  const client = mqtt.connect(url, {
-    username: MQTT_USER,
-    password: MQTT_PASS,
-  });
-
-  client.on("connect", () => {
-    const topic = `${MQTT_TOPIC_PREFIX}/#`;
-    logInfo(`Connected to MQTT broker. Subscribing to ${topic}`);
-    client.subscribe(topic);
-  });
-
-  client.on("message", (_topic: string, payload: Buffer) => {
-    const value = payload.toString().toLowerCase();
-    const isOn = value === "on";
-    const isOff = value === "off";
-
-    if (!isOn && !isOff) return;
-
-    // Find matching device by topic
-    const configIndex = DEVICES_CONFIG.findIndex((d) => d.topic === _topic);
-    if (configIndex === -1) return;
-
-    const device = devices[configIndex];
-    const newState = isOn;
-
-    if (device.on === newState) return; // no change
-
-    device.on = newState;
-    logInfo(`${device.label}: ${newState ? "ON" : "OFF"}`);
-    scheduleUpdate();
-  });
-
-  client.on("error", (err) => {
-    logError("MQTT error", err);
-  });
-
-  client.on("offline", () => {
-    logInfo("MQTT client offline");
-  });
-
-  client.on("reconnect", () => {
-    logInfo("MQTT reconnecting...");
-  });
-
-  return client;
-}
-
 async function main(): Promise<void> {
-  setupGlobalErrorHandler();
+  // Resources are disposed in reverse order when main() returns or throws
+  using _hardware = await initHardware();
 
-  console.log("\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557");
-  console.log("\u2551       Home Dashboard Display          \u2551");
-  console.log("\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d");
-  console.log();
-
-  // Initial render with all data
   logInfo("Rendering initial dashboard...");
   await updateDisplay();
 
-  // Connect MQTT for device status updates
-  const client = connectMqtt();
+  using debouncer = createDebouncedUpdater();
 
-  // Periodic refresh for weather/electricity/dishes data
-  refreshTimer = setInterval(() => {
+  await using _mqtt = connectMqtt(debouncer.schedule);
+
+  using _refresh = setInterval(() => {
     logInfo("Periodic refresh triggered");
     updateDisplay().catch((err) =>
       logError("Periodic refresh error", err instanceof Error ? err : undefined),
     );
   }, REFRESH_INTERVAL_MS);
 
-  if (IS_MOCK) {
-    console.log();
-    console.log("Running in mock mode:");
-    console.log("  \u2022 Images saved to ./preview.png");
-    console.log("  \u2022 Press Ctrl+C to exit");
-    console.log();
-  }
-}
+  await Promise.race([
+    once(process, "SIGINT"),
+    once(process, "SIGTERM"),
+    once(process, "SIGHUP"),
+  ]);
 
-function shutdown(): void {
   logInfo("Shutting down...");
-  if (debounceTimer) clearTimeout(debounceTimer);
-  if (refreshTimer) clearInterval(refreshTimer);
-  cleanup();
-  process.exit(0);
 }
-
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
 
 main().catch((error) => {
   logError("Fatal error", error instanceof Error ? error : undefined);
