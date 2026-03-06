@@ -104,6 +104,12 @@ export interface LineChartProps extends BaseProps {
 
   /** Custom labels for X axis (overrides xLabelCount) */
   xLabels?: string[];
+
+  /** Show axis lines (default: true). Labels are still shown when false. */
+  showAxisLines?: boolean;
+
+  /** Use step interpolation — flat lines with 90° jumps between points */
+  stepLine?: boolean;
 }
 
 /** Union of all element props */

@@ -26,12 +26,17 @@ setTheme({ ...EINK_BW_THEME, defaultFont: "Noto Sans" });
 registerFont("./fonts/noto-sans-regular.ttf", "Noto Sans");
 registerIconFont();
 
+const RENDER_ONCE = process.env.RENDER_ONCE === "1";
+
 const MQTT_HOST = process.env.MQTT_HOST;
 const MQTT_PORT = Number(process.env.MQTT_PORT);
 const MQTT_USER = process.env.MQTT_USERNAME;
 const MQTT_PASS = process.env.MQTT_PASSWORD;
 const MQTT_TOPIC_PREFIX = process.env.MQTT_TOPIC_PREFIX;
-if (!MQTT_USER || !MQTT_PASS || !MQTT_TOPIC_PREFIX || !MQTT_HOST || !MQTT_PORT) {
+if (
+  !RENDER_ONCE &&
+  (!MQTT_USER || !MQTT_PASS || !MQTT_TOPIC_PREFIX || !MQTT_HOST || !MQTT_PORT)
+) {
   throw new Error("Missing required MQTT environment variables");
 }
 
@@ -159,6 +164,11 @@ async function main(): Promise<void> {
 
   logInfo("Rendering initial dashboard...");
   await updateDisplay();
+
+  if (RENDER_ONCE) {
+    logInfo("Render-once mode — exiting.");
+    return;
+  }
 
   using debouncer = createDebouncedUpdater();
 

@@ -148,7 +148,15 @@ function drawLineChart(
   box: LayoutBox,
   canvas: Canvas,
 ): void {
-  const { data, markedIndex, xLabelCount, yLabelCount, xLabels } = props;
+  const {
+    data,
+    markedIndex,
+    xLabelCount,
+    yLabelCount,
+    xLabels,
+    showAxisLines = true,
+    stepLine = false,
+  } = props;
 
   if (!data || data.length === 0) return;
 
@@ -215,15 +223,17 @@ function drawLineChart(
   }
 
   // Draw axis lines
-  canvas.setStrokeColor(resolveColor("darkGray"));
-  canvas.setLineWidth(1);
-  canvas.beginPath();
-  // Y-axis
-  canvas.moveTo(chartX, chartY);
-  canvas.lineTo(chartX, chartY + chartHeight);
-  // X-axis
-  canvas.lineTo(chartX + chartWidth, chartY + chartHeight);
-  canvas.stroke();
+  if (showAxisLines) {
+    canvas.setStrokeColor(resolveColor("darkGray"));
+    canvas.setLineWidth(1);
+    canvas.beginPath();
+    // Y-axis
+    canvas.moveTo(chartX, chartY);
+    canvas.lineTo(chartX, chartY + chartHeight);
+    // X-axis
+    canvas.lineTo(chartX + chartWidth, chartY + chartHeight);
+    canvas.stroke();
+  }
 
   // Draw the line graph
   canvas.setStrokeColor(resolveColor("black"));
@@ -231,21 +241,19 @@ function drawLineChart(
   canvas.beginPath();
   canvas.moveTo(indexToX(0), valueToY(data[0]));
 
-  for (let i = 1; i < data.length; i++) {
-    canvas.lineTo(indexToX(i), valueToY(data[i]));
+  if (stepLine) {
+    for (let i = 1; i < data.length; i++) {
+      // Horizontal line at previous value to current x
+      canvas.lineTo(indexToX(i), valueToY(data[i - 1]));
+      // Vertical jump to new value
+      canvas.lineTo(indexToX(i), valueToY(data[i]));
+    }
+  } else {
+    for (let i = 1; i < data.length; i++) {
+      canvas.lineTo(indexToX(i), valueToY(data[i]));
+    }
   }
   canvas.stroke();
-
-  // Draw data points as small circles
-  canvas.setFillColor(resolveColor("black"));
-  for (let i = 0; i < data.length; i++) {
-    const x = indexToX(i);
-    const y = valueToY(data[i]);
-
-    canvas.beginPath();
-    canvas.arc(x, y, 3, 0, Math.PI * 2);
-    canvas.fill();
-  }
 
   // Draw marked point (larger, filled circle)
   if (

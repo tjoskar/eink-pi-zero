@@ -16,23 +16,15 @@ interface CollectionEntry {
 }
 
 const GARBAGE_COLLECTION_DATES: CollectionEntry[] = [
-  { household: "2025-10-29", garden: "2025-10-31" },
-  { household: "2025-11-12", garden: "2025-11-14" },
-  { household: "2025-11-26", garden: "2025-11-28" },
-  { household: "2025-12-10" },
-  { household: "2025-12-24" },
-  { household: "2026-01-07" },
-  { household: "2026-01-21" },
+  { household: "2026-03-18" },
+  { household: "2026-03-31" },
+  { household: "2026-04-15", garden: "2026-04-17" },
 ];
 
 const TYPE_LABELS: Record<"household" | "garden", string> = {
   household: "Hush\u00e5llssopor",
   garden: "Tr\u00e4dg\u00e5rdsavfall",
 };
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function parseDate(str: string): Date {
   // Parse "YYYY-MM-DD" as local date (midnight)
@@ -59,10 +51,6 @@ function formatDateStr(date: Date): string {
   const mm = String(date.getMonth() + 1).padStart(2, "0");
   return `${dd}/${mm}`;
 }
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
 
 export function getGarbageData(): GarbageData {
   const now = new Date();

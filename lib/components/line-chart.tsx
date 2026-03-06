@@ -76,6 +76,12 @@ export interface LineChartProps {
    */
   xLabels?: string[];
 
+  /** Show axis lines (default: true). Labels are still shown when false. */
+  showAxisLines?: boolean;
+
+  /** Use step interpolation — flat lines with 90° jumps between points */
+  stepLine?: boolean;
+
   /** Optional background color */
   background?: string;
 }
@@ -88,6 +94,8 @@ export function LineChart({
   xLabelCount,
   yLabelCount,
   xLabels,
+  showAxisLines,
+  stepLine,
   background,
 }: LineChartProps): JSX.Element {
   return (
@@ -99,6 +107,8 @@ export function LineChart({
       xLabelCount={xLabelCount}
       yLabelCount={yLabelCount}
       xLabels={xLabels}
+      showAxisLines={showAxisLines}
+      stepLine={stepLine}
       background={background}
     />
   );

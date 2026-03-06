@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "MOCK=1 tsx --env-file=.env",
     "dev:watch": "MOCK=1 tsx --env-file=.env --watch",
+    "render-once": "MOCK=1 RENDER_ONCE=1 tsx --env-file=.env",
     "build": "esbuild src/*/main.tsx src/*/main.ts --bundle --platform=node --format=esm --outdir=dist --external:@napi-rs/canvas --sourcemap",
     "start": "node --enable-source-maps dist/hello-world/main.js",
     "deploy": "./scripts/deploy.sh",

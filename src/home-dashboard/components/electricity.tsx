@@ -41,24 +41,40 @@ function ConsumptionChart({ data }: { data: ElectricityData }) {
   const maxValue = Math.max(...consumption, 1);
   const barWidth = Math.floor(240 / consumption.length) - 6;
 
+  const midValue = maxValue / 2;
+  const labelWidth = 24;
+
   return (
     <view direction="column" gap={4}>
-      {/* Bars row */}
-      <view direction="row" align="end" gap={4} height={80}>
-        {consumption.map((value) => (
-          <ConsumptionBar
-            value={value}
-            maxValue={maxValue}
-            barWidth={barWidth}
-          />
-        ))}
+      {/* Y-axis labels + bars row */}
+      <view direction="row" gap={4}>
+        <view direction="column" height={80} width={labelWidth}>
+          <text size={14} color="darkGray">
+            {Math.round(maxValue)}
+          </text>
+          <view flex={1} justify="center">
+            <text size={14} color="darkGray">
+              {Math.round(midValue)}
+            </text>
+          </view>
+        </view>
+        <view direction="row" align="end" gap={4} height={80}>
+          {consumption.map((value) => (
+            <ConsumptionBar
+              value={value}
+              maxValue={maxValue}
+              barWidth={barWidth}
+            />
+          ))}
+        </view>
       </view>
 
       {/* Cost labels row */}
       <view direction="row" gap={4}>
+        <view width={labelWidth} />
         {consumptionCosts.map((cost) => (
           <view width={barWidth + 2}>
-            <text size={10} color="darkGray" textAlign="center">
+            <text size={14} color="darkGray" textAlign="center">
               {Math.round(cost)}
             </text>
           </view>
@@ -97,6 +113,8 @@ export function ElectricitySection({
         height={100}
         markedIndex={data.highlightIndex}
         yLabelCount={3}
+        showAxisLines={false}
+        stepLine
       />
 
       {/* Consumption title */}
