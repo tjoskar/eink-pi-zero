@@ -10,95 +10,70 @@ export interface GarbageData {
   reminder: string | null;
 }
 
-interface CollectionEntry {
-  household: string;
-  garden?: string;
+export interface CollectionEntry {
+  type: "household" | "garden";
+  date: string; // YYYY-MM-DD
 }
 
 const GARBAGE_COLLECTION_DATES: CollectionEntry[] = [
-  { household: "2026-03-18" },
-  { household: "2026-03-31" },
-  { household: "2026-04-15", garden: "2026-04-17" },
+  { type: "household", date: "2026-03-18" },
+  { type: "household", date: "2026-03-31" },
+  { type: "household", date: "2026-04-15" },
+  { type: "garden", date: "2026-04-17" },
 ];
 
 const TYPE_LABELS: Record<"household" | "garden", string> = {
-  household: "Hush\u00e5llssopor",
-  garden: "Tr\u00e4dg\u00e5rdsavfall",
+  household: "Hushållssopor",
+  garden: "Trädgårdsavfall",
 };
 
-function parseDate(str: string): Date {
-  // Parse "YYYY-MM-DD" as local date (midnight)
+const REMINDER_TEXT: Record<"household" | "garden", string> = {
+  household: "hushållssoporna",
+  garden: "trädgårdsavfallet",
+};
+
+const dateFormat = new Intl.DateTimeFormat("sv-SE", { day: "2-digit", month: "2-digit" });
+const relativeFormat = new Intl.RelativeTimeFormat("sv-SE", { numeric: "auto" });
+
+function parseLocalDate(str: string): Date {
   const [y, m, d] = str.split("-").map(Number);
   return new Date(y, m - 1, d);
 }
 
 function daysBetween(a: Date, b: Date): number {
   const msPerDay = 86_400_000;
-  // Normalize to midnight to avoid DST edge cases
   const utcA = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
   const utcB = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
   return Math.round((utcB - utcA) / msPerDay);
 }
 
-function formatDaysUntil(days: number): string {
-  if (days === 0) return "idag";
-  if (days === 1) return "imorgon";
-  return `om ${days} dagar`;
-}
-
-function formatDateStr(date: Date): string {
-  const dd = String(date.getDate()).padStart(2, "0");
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  return `${dd}/${mm}`;
-}
-
-export function getGarbageData(): GarbageData {
-  const now = new Date();
+export function getGarbageData(
+  now: Date = new Date(),
+  dates: CollectionEntry[] = GARBAGE_COLLECTION_DATES,
+): GarbageData {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  // Collect all future events (including today)
-  const futureEvents: Array<{
-    type: "household" | "garden";
-    date: Date;
-  }> = [];
+  const upcoming = dates
+    .map((e) => ({ ...e, parsed: parseLocalDate(e.date) }))
+    .filter((e) => e.parsed >= today)
+    .slice(0, 2);
 
-  for (const entry of GARBAGE_COLLECTION_DATES) {
-    const householdDate = parseDate(entry.household);
-    if (householdDate >= today) {
-      futureEvents.push({ type: "household", date: householdDate });
-    }
-
-    if (entry.garden) {
-      const gardenDate = parseDate(entry.garden);
-      if (gardenDate >= today) {
-        futureEvents.push({ type: "garden", date: gardenDate });
-      }
-    }
-  }
-
-  // Sort by date and take next 2
-  futureEvents.sort((a, b) => a.date.getTime() - b.date.getTime());
-  const nextTwo = futureEvents.slice(0, 2);
-
-  // Build GarbageEvent list
-  const events: GarbageEvent[] = nextTwo.map((ev) => {
-    const days = daysBetween(today, ev.date);
+  const events: GarbageEvent[] = upcoming.map((e) => {
+    const days = daysBetween(today, e.parsed);
     return {
-      type: ev.type,
-      dateStr: formatDateStr(ev.date),
-      daysUntil: formatDaysUntil(days),
-      label: TYPE_LABELS[ev.type],
+      type: e.type,
+      dateStr: dateFormat.format(e.parsed),
+      daysUntil: relativeFormat.format(days, "day"),
+      label: TYPE_LABELS[e.type],
     };
   });
 
   // Reminder if next collection is today or tomorrow
   let reminder: string | null = null;
-  if (events.length > 0) {
-    const first = events[0];
-    if (first.daysUntil === "idag" || first.daysUntil === "imorgon") {
-      const typeText =
-        first.type === "household" ? "hush\u00e5llssoporna" : "tr\u00e4dg\u00e5rdsavfallet";
-      reminder = `Dags att st\u00e4lla ut ${typeText}!`;
+  if (upcoming.length > 0) {
+    const daysToFirst = daysBetween(today, upcoming[0].parsed);
+    if (daysToFirst <= 1) {
+      reminder = `Dags att ställa ut ${REMINDER_TEXT[upcoming[0].type]}!`;
     }
   }
 
