@@ -1,4 +1,4 @@
-import type { WeatherDisplayData } from "../weather-api.ts";
+import type { WeatherDisplayData } from "../../home-dashboard/components/weather/weather-api.ts";
 
 export const MOCK_WEATHER: WeatherDisplayData = {
   current: {

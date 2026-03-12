@@ -5,7 +5,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertSnapshot } from "../../test/snapshot-utils.ts";
 
-vi.mock("./weather-api.ts", () => ({
+vi.mock("../home-dashboard/components/weather/weather-api.ts", () => ({
   getWeatherDisplayData: vi.fn(() => Promise.resolve(MOCK_WEATHER)),
 }));
 

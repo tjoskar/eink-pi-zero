@@ -7,6 +7,7 @@
  */
 import { renderApp } from "./app.tsx";
 import { connectMqtt, validateMqttEnv } from "./mqtt.ts";
+import { devicesState } from "./components/devices/devices.tsx";
 import {
   setTheme,
   EINK_BW_THEME,
@@ -62,11 +63,21 @@ async function main(): Promise<void> {
 
   validateMqttEnv();
 
-  await using _mqtt = connectMqtt(() =>
-    updateDisplay().catch((err) =>
-      console.error("Render error", err instanceof Error ? err : undefined),
-    ),
-  );
+  await using _mqtt = connectMqtt({
+    onMessage(topic, value) {
+      const devices = devicesState.get();
+      const device = devices.get(topic);
+      if (!device) return;
+      const on = value === "on";
+      if (device.on === on) return;
+      devicesState.set(new Map(devices).set(topic, { ...device, on }));
+      console.log(`${device.label}: ${on ? "ON" : "OFF"}`);
+    },
+    onUpdate: () =>
+      updateDisplay().catch((err) =>
+        console.error("Render error", err instanceof Error ? err : undefined),
+      ),
+  });
 
   using _refresh = setInterval(() => {
     console.log("Periodic refresh triggered");

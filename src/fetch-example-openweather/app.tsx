@@ -3,7 +3,7 @@ import {
   getWeatherDisplayData,
   type WeatherDisplayData,
   type ForecastDay,
-} from "./weather-api.ts";
+} from "../home-dashboard/components/weather/weather-api.ts";
 
 const DETAIL_ICONS = {
   wind: "wind_power",

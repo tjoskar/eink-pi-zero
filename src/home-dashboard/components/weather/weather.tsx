@@ -10,7 +10,7 @@ import {
   getWeatherDisplayData,
   type WeatherDisplayData,
   type ForecastDay,
-} from "../../../fetch-example-openweather/weather-api.ts";
+} from "./weather-api.ts";
 
 const DETAIL_ICONS = {
   wind: "wind_power",

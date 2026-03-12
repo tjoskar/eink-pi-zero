@@ -1,5 +1,4 @@
 import mqtt from "mqtt";
-import { devicesState } from "./components/devices/devices.tsx";
 
 const MQTT_HOST = process.env.MQTT_HOST;
 const MQTT_PORT = Number(process.env.MQTT_PORT);
@@ -37,13 +36,14 @@ function createDebouncedUpdater(onUpdate: () => void): {
   };
 }
 
-export function connectMqtt(
-  onUpdate: () => void,
-): { debouncer: { [Symbol.dispose]: () => void } } & AsyncDisposable {
+export function connectMqtt(opts: {
+  onMessage: (topic: string, value: string) => void;
+  onUpdate: () => void;
+}): AsyncDisposable {
   const url = `mqtt://${MQTT_HOST}:${MQTT_PORT}`;
   console.log(`Connecting to MQTT broker at ${url}...`);
 
-  const debouncer = createDebouncedUpdater(onUpdate);
+  const debouncer = createDebouncedUpdater(opts.onUpdate);
 
   const client = mqtt.connect(url, {
     username: MQTT_USER,
@@ -59,16 +59,7 @@ export function connectMqtt(
   client.on("message", (topic: string, payload: Buffer) => {
     const value = payload.toString().toLowerCase();
     if (value !== "on" && value !== "off") return;
-
-    const devices = devicesState.get();
-    const device = devices.get(topic);
-    if (!device) return;
-
-    const newState = value === "on";
-    if (device.on === newState) return;
-
-    devicesState.set(new Map(devices).set(topic, { ...device, on: newState }));
-    console.log(`${device.label}: ${newState ? "ON" : "OFF"}`);
+    opts.onMessage(topic, value);
     debouncer.schedule();
   });
 
@@ -85,7 +76,6 @@ export function connectMqtt(
   });
 
   return {
-    debouncer,
     async [Symbol.asyncDispose]() {
       debouncer[Symbol.dispose]();
       console.log("Disconnecting MQTT...");

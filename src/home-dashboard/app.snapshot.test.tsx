@@ -78,12 +78,12 @@ test("home dashboard renders consistently", async () => {
   const { renderApp } = await import("./app.tsx");
   const { devicesState } = await import("./components/devices/devices.tsx");
 
-  devicesState.set([
-    { label: "Washing Machine", icon: "local_laundry_service", on: true },
-    { label: "Dryer", icon: "dry_cleaning", on: false },
-    { label: "Engine Heater", icon: "local_fire_department", on: true },
-    { label: "Bike Charger", icon: "electric_bike", on: false },
-  ]);
+  devicesState.set(new Map([
+    ["test/washing_machine", { label: "Washing Machine", icon: "local_laundry_service", on: true }],
+    ["test/dryer", { label: "Dryer", icon: "dry_cleaning", on: false }],
+    ["test/engine_heater", { label: "Engine Heater", icon: "local_fire_department", on: true }],
+    ["test/bike_charger", { label: "Bike Charger", icon: "electric_bike", on: false }],
+  ]));
 
   const actualPng = await renderApp();
 

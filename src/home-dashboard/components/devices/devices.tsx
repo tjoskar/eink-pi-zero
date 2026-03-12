@@ -5,7 +5,8 @@
  * matching the mqtt-device-status pattern.
  */
 import { jsx, Icon, createState } from "#lib";
-import { DEVICES } from "../../devices.ts";
+
+const MQTT_TOPIC_PREFIX = process.env.MQTT_TOPIC_PREFIX ?? "";
 
 export interface DeviceState {
   label: string;
@@ -13,12 +14,12 @@ export interface DeviceState {
   on: boolean;
 }
 
-const initialDevices = new Map<string, DeviceState>(
-  Array.from(DEVICES, ([topic, config]) => [
-    topic,
-    { ...config, on: false },
-  ]),
-);
+const initialDevices = new Map<string, DeviceState>([
+  [`${MQTT_TOPIC_PREFIX}/statechange/washing_machine`, { label: "Washing Machine", icon: "local_laundry_service", on: false }],
+  [`${MQTT_TOPIC_PREFIX}/statechange/dryer`, { label: "Dryer", icon: "dry_cleaning", on: false }],
+  [`${MQTT_TOPIC_PREFIX}/statechange/engine_heater`, { label: "Engine Heater", icon: "local_fire_department", on: false }],
+  [`${MQTT_TOPIC_PREFIX}/statechange/bike_charger`, { label: "Bike Charger", icon: "electric_bike", on: false }],
+]);
 
 export const devicesState = createState(initialDevices);
 
