@@ -8,10 +8,6 @@
 import type { LayoutStyle } from "../layout/types.ts";
 import type { Color } from "../theme.ts";
 
-// =============================================================================
-// JSX Node Types
-// =============================================================================
-
 /** Primitive types that can appear as children */
 export type JSXChild = JSXElement | string | number | null | undefined;
 
@@ -26,10 +22,6 @@ export interface JSXElement {
 
 /** A function component */
 export type ComponentFunction = (props: Record<string, unknown>) => JSXElement | Promise<JSXElement>;
-
-// =============================================================================
-// Element Props
-// =============================================================================
 
 /** Base props shared by all elements */
 export interface BaseProps extends LayoutStyle {
@@ -114,10 +106,6 @@ export interface LineChartProps extends BaseProps {
 
 /** Union of all element props */
 export type ElementProps = ViewProps | TextProps | ImageProps | LineChartProps;
-
-// =============================================================================
-// JSX Namespace Declaration
-// =============================================================================
 
 /**
  * Declares the JSX namespace for TypeScript.

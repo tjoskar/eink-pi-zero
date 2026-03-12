@@ -12,20 +12,12 @@ import {
   type ForecastDay,
 } from "../../../fetch-example-openweather/weather-api.ts";
 
-// ---------------------------------------------------------------------------
-// Detail row icons (Material Icon names)
-// ---------------------------------------------------------------------------
-
 const DETAIL_ICONS = {
   wind: "wind_power",
   sun: "wb_twilight",
   rain: "water_drop",
   uv: "wb_iridescent",
 } as const;
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
 
 function DetailRow({ icon, text }: { icon: string; text: string }) {
   return (
@@ -85,10 +77,6 @@ function Forecast({ days }: { days: ForecastDay[] }) {
     </view>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Exported section
-// ---------------------------------------------------------------------------
 
 export async function WeatherSection() {
   const data = await getWeatherDisplayData().catch((err) => {

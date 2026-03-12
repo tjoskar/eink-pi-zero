@@ -5,7 +5,7 @@
  * matching the mqtt-device-status pattern.
  */
 import { jsx, Icon, createState } from "#lib";
-import { DEVICES_CONFIG } from "../../../mqtt-device-status/devices.ts";
+import { DEVICES } from "../../devices.ts";
 
 export interface DeviceState {
   label: string;
@@ -13,19 +13,20 @@ export interface DeviceState {
   on: boolean;
 }
 
-const initialDevices: DeviceState[] = DEVICES_CONFIG.map((d) => ({
-  label: d.label,
-  icon: d.icon,
-  on: false,
-}));
+const initialDevices = new Map<string, DeviceState>(
+  Array.from(DEVICES, ([topic, config]) => [
+    topic,
+    { ...config, on: false },
+  ]),
+);
 
-export const devicesState = createState<DeviceState[]>(initialDevices);
+export const devicesState = createState(initialDevices);
 
 export function DeviceColumn() {
   const devices = devicesState.get();
   return (
     <view direction="column" gap={8}>
-      {devices.map((device) => (
+      {Array.from(devices.values(), (device) => (
         <DeviceIcon device={device} />
       ))}
     </view>

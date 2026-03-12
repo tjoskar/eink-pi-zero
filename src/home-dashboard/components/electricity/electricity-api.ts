@@ -1,7 +1,4 @@
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { request, getCachePath } from "#lib";
-
-const CACHE_FILE = getCachePath("electricity_cache.json");
+import { fetchJson, createCache } from "#lib";
 
 const TIBBER_API_URL = "https://api.tibber.com/v1-beta/gql";
 const SHORT_WINDOW_TTL = 300; // 5 minutes (seconds)
@@ -51,11 +48,6 @@ export interface ElectricityData {
   consumptionCosts: number[];
 }
 
-interface CacheEnvelope {
-  timestamp: number;
-  data: TibberResponse;
-}
-
 interface PriceEntry {
   total: number;
   startsAt: string;
@@ -85,50 +77,16 @@ interface TibberResponse {
   };
 }
 
-function loadCache(opts?: { allowStale?: boolean }): TibberResponse | null {
-  try {
-    if (!existsSync(CACHE_FILE)) return null;
-
-    const raw = readFileSync(CACHE_FILE, "utf-8");
-    const cache: CacheEnvelope = JSON.parse(raw);
-    if (!cache.data) return null;
-
-    if (opts?.allowStale) return cache.data;
-
-    const nowHour = new Date().getHours();
-    const cacheAge = Date.now() / 1000 - (cache.timestamp ?? 0);
-
-    // Hard age cap: if older than 24h force refresh regardless of window
-    if (cacheAge > MAX_AGE) return null;
-
-    // Short refresh window: 13:00 <= time < 15:00
-    if (nowHour >= 13 && nowHour < 15) {
-      return cacheAge < SHORT_WINDOW_TTL ? cache.data : null;
-    }
-
-    // Outside publication window reuse any age (up to MAX_AGE)
-    return cache.data;
-  } catch (err) {
-    console.error("Error reading electricity cache:", err);
-    return null;
-  }
-}
-
-function saveCache(data: TibberResponse): void {
-  try {
-    const envelope: CacheEnvelope = {
-      timestamp: Date.now() / 1000,
-      data,
-    };
-    writeFileSync(CACHE_FILE, JSON.stringify(envelope));
-  } catch (err) {
-    console.error("Error writing electricity cache:", err);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Fetch
-// ---------------------------------------------------------------------------
+const cache = createCache<TibberResponse>({
+  file: "electricity_cache.json",
+  label: "Electricity",
+  isFresh({ timestamp }) {
+    const age = Date.now() / 1000 - timestamp;
+    if (age > MAX_AGE) return false;
+    const h = new Date().getHours();
+    return h >= 13 && h < 15 ? age < SHORT_WINDOW_TTL : true;
+  },
+});
 
 async function fetchTibberPrices(): Promise<TibberResponse | null> {
   const token = process.env.TIBBER_TOKEN;
@@ -137,32 +95,17 @@ async function fetchTibberPrices(): Promise<TibberResponse | null> {
     return null;
   }
 
-  try {
-    const resp = await request(TIBBER_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ query: TIBBER_QUERY }),
-      signal: AbortSignal.timeout(1_000),
-    });
-
-    if (!resp.ok) {
-      console.error(`Tibber API HTTP ${resp.status}`);
-      return null;
-    }
-
-    return (await resp.json()) as TibberResponse;
-  } catch (err) {
-    console.error("Electricity fetch error:", err);
-    return null;
-  }
+  return fetchJson<TibberResponse>(TIBBER_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ query: TIBBER_QUERY }),
+    timeout: 1_000,
+    label: "Tibber",
+  });
 }
-
-// ---------------------------------------------------------------------------
-// Process response into ElectricityData
-// ---------------------------------------------------------------------------
 
 function processResponse(data: TibberResponse): ElectricityData | null {
   try {
@@ -241,26 +184,19 @@ function processResponse(data: TibberResponse): ElectricityData | null {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
 export async function getElectricityData(): Promise<ElectricityData | null> {
-  // 1. Try fresh cache
-  const cached = loadCache();
+  const cached = cache.read();
   if (cached) {
     return processResponse(cached);
   }
 
-  // 2. Fetch from API
   const fetched = await fetchTibberPrices();
   if (fetched) {
-    saveCache(fetched);
+    cache.write(fetched);
     return processResponse(fetched);
   }
 
-  // 3. Stale cache fallback
-  const stale = loadCache({ allowStale: true });
+  const stale = cache.read(true);
   if (stale) {
     console.log("Using stale electricity cache as fallback");
     return processResponse(stale);

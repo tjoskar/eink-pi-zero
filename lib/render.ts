@@ -10,8 +10,6 @@ import type {
 } from "./runtime/types.ts";
 import { resolveColor, buildFontString } from "./theme.ts";
 
-// Phase 1: Resolve Components
-
 /**
  * Recursively resolve function components to intrinsic elements.
  *
@@ -29,15 +27,6 @@ async function resolveElement(element: JSXElement): Promise<JSXElement> {
   return element;
 }
 
-/**
- * Flatten children into an array, filtering out nulls.
- *
- * Children can be:
- * - A single element
- * - An array of elements
- * - Nested arrays
- * - null/undefined (filtered out)
- */
 async function flattenChildren(children: JSXChildren | undefined): Promise<JSXElement[]> {
   if (children == null) return [];
 
@@ -83,8 +72,6 @@ function getTextContent(children: JSXChildren | undefined): string {
 
   return "";
 }
-
-// Phase 2: Build Layout Tree
 
 /**
  * Convert a JSX element tree to a layout node tree.
@@ -134,8 +121,6 @@ async function buildLayoutTree(element: JSXElement): Promise<LayoutNode> {
     children: childNodes,
   };
 }
-
-// Phase 3: Draw to Canvas
 
 /**
  * Draw a line chart to the canvas.

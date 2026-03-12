@@ -4,10 +4,6 @@
  * Frozen test time: 2026-03-07 14:30:00 (Saturday)
  */
 
-// ---------------------------------------------------------------------------
-// OpenWeatherMap 3.0 OneCall response
-// ---------------------------------------------------------------------------
-
 const SAT_NOON = Math.floor(new Date(2026, 2, 7, 12, 0, 0).getTime() / 1000);
 
 export const MOCK_OPENWEATHER_RESPONSE = {
@@ -38,10 +34,6 @@ export const MOCK_OPENWEATHER_RESPONSE = {
     { dt: SAT_NOON + 86400 * 5, temp: { min: 3, max: 8 }, weather: [{ icon: "04d" }] },
   ],
 };
-
-// ---------------------------------------------------------------------------
-// Tibber GraphQL response
-// ---------------------------------------------------------------------------
 
 function makePriceEntries(baseDate: Date, count: number, basePrice: number): Array<{
   total: number;
@@ -97,10 +89,6 @@ export const MOCK_TIBBER_RESPONSE = {
     },
   },
 };
-
-// ---------------------------------------------------------------------------
-// Dishes response (simple string array)
-// ---------------------------------------------------------------------------
 
 export const MOCK_DISHES_RESPONSE = [
   "Köttbullar med potatismos",

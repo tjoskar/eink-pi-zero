@@ -49,10 +49,6 @@ export type EinkColorPalette =
  */
 export type Color = EinkBWColor | EinkColorPalette | (string & {});
 
-// =============================================================================
-// Theme Configuration
-// =============================================================================
-
 /**
  * Theme configuration for the JSX framework.
  */
