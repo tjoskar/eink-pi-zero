@@ -89,6 +89,7 @@ function App({ data }: { data: WeatherDisplayData }) {
 
 export async function renderApp(): Promise<Buffer> {
   const data = await getWeatherDisplayData();
+  if (!data) throw new Error("No weather data available");
   const canvas = Canvas.create(800, 480);
   await render(<App data={data} />, canvas);
   return canvas.toPng();

@@ -1,10 +1,12 @@
-/**
- * Dishes section — weekly meal plan as a bulleted list.
- */
-
 import { jsx } from "#lib";
+import { getDishes } from "./dishes-api.ts";
 
-export function DishesSection({ dishes }: { dishes: string[] }) {
+export async function DishesSection() {
+  const dishes = await getDishes().catch((err) => {
+    console.error("Dishes fetch failed:", err);
+    return [] as string[];
+  });
+
   if (dishes.length === 0) {
     return (
       <view>

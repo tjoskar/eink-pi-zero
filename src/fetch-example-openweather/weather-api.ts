@@ -12,9 +12,8 @@
  */
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import { getWeatherIconName } from "./weather-icons.ts";
+import { request, getCachePath } from "#lib";
 
 const API_KEY = process.env.WEATHER_API_KEY ?? "";
 const LAT = process.env.WEATHER_LAT ?? "59.3293";
@@ -24,8 +23,7 @@ const LANG = process.env.WEATHER_LANG ?? "en";
 const CACHE_DURATION_S = Number(process.env.CACHE_DURATION ?? 3600);
 const API_TIMEOUT_MS = Number(process.env.API_TIMEOUT ?? 10_000);
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const CACHE_FILE = join(__dirname, "weather_cache.json");
+const CACHE_FILE = getCachePath("weather_cache.json");
 
 const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -54,13 +52,13 @@ interface CacheEnvelope {
   data: Record<string, unknown>;
 }
 
-function readCache(): Record<string, unknown> | null {
+function readCache(opts?: { allowStale?: boolean }): Record<string, unknown> | null {
   try {
     if (!existsSync(CACHE_FILE)) return null;
     const envelope: CacheEnvelope = JSON.parse(
       readFileSync(CACHE_FILE, "utf-8"),
     );
-    if (Date.now() / 1000 - envelope.timestamp < CACHE_DURATION_S) {
+    if (opts?.allowStale || Date.now() / 1000 - envelope.timestamp < CACHE_DURATION_S) {
       return envelope.data;
     }
   } catch (e) {
@@ -83,35 +81,14 @@ async function fetchFromApi(): Promise<Record<string, any>> {
     `https://api.openweathermap.org/data/3.0/onecall` +
     `?lat=${LAT}&lon=${LON}&units=${UNITS}&lang=${LANG}&appid=${API_KEY}`;
 
-  const res = await fetch(url, { signal: AbortSignal.timeout(API_TIMEOUT_MS) });
+  const res = await request(url, { signal: AbortSignal.timeout(API_TIMEOUT_MS) });
   if (!res.ok) {
     throw new Error(`OpenWeatherMap API ${res.status}: ${res.statusText}`);
   }
   return (await res.json()) as Record<string, any>;
 }
 
-function getFallbackData(): Record<string, any> {
-  const now = Date.now() / 1000;
-  return {
-    current: {
-      dt: now,
-      temp: 0,
-      weather: [{ icon: "01d" }],
-      wind_speed: 0,
-      sunrise: now,
-      sunset: now + 43200,
-      uvi: 0,
-    },
-    hourly: [],
-    daily: Array.from({ length: 6 }, (_, i) => ({
-      dt: now + i * 86400,
-      temp: { min: 0, max: 0 },
-      weather: [{ icon: "01d" }],
-    })),
-  };
-}
-
-async function fetchWeatherData(): Promise<Record<string, any>> {
+async function fetchWeatherData(): Promise<Record<string, any> | null> {
   const cached = readCache();
   if (cached) return cached;
 
@@ -120,8 +97,13 @@ async function fetchWeatherData(): Promise<Record<string, any>> {
     writeCache(data);
     return data;
   } catch (e) {
-    console.log("Weather fetch failed, using fallback:", e);
-    return getFallbackData();
+    console.log("Weather fetch failed, trying stale cache:", e);
+    const stale = readCache({ allowStale: true });
+    if (stale) {
+      console.log("Using stale weather cache as fallback");
+      return stale;
+    }
+    return null;
   }
 }
 
@@ -172,8 +154,9 @@ function getUvInfo(data: Record<string, any>): string {
   return `${Math.round(currentUv)} (${Math.round(maxUv)}, ${minH} - ${maxH})`;
 }
 
-export async function getWeatherDisplayData(): Promise<WeatherDisplayData> {
+export async function getWeatherDisplayData(): Promise<WeatherDisplayData | null> {
   const data = await fetchWeatherData();
+  if (!data) return null;
 
   const current = data.current ?? {};
   const temp = current.temp ?? 0;

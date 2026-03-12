@@ -3,9 +3,10 @@
  */
 
 import { jsx } from "#lib";
-import type { GarbageData } from "../data/garbage-data.ts";
+import { getGarbageData } from "./garbage-data.ts";
 
-export function GarbageSection({ data }: { data: GarbageData }) {
+export function GarbageSection() {
+  const data = getGarbageData();
   if (data.events.length === 0) {
     return <view />;
   }

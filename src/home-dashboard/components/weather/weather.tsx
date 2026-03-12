@@ -6,10 +6,11 @@
  */
 
 import { jsx, Icon } from "#lib";
-import type {
-  WeatherDisplayData,
-  ForecastDay,
-} from "../../fetch-example-openweather/weather-api.ts";
+import {
+  getWeatherDisplayData,
+  type WeatherDisplayData,
+  type ForecastDay,
+} from "../../../fetch-example-openweather/weather-api.ts";
 
 // ---------------------------------------------------------------------------
 // Detail row icons (Material Icon names)
@@ -89,11 +90,12 @@ function Forecast({ days }: { days: ForecastDay[] }) {
 // Exported section
 // ---------------------------------------------------------------------------
 
-export function WeatherSection({
-  data,
-}: {
-  data: WeatherDisplayData | null;
-}) {
+export async function WeatherSection() {
+  const data = await getWeatherDisplayData().catch((err) => {
+    console.error("Weather fetch failed:", err);
+    return null;
+  });
+
   if (!data) {
     return (
       <view>

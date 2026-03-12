@@ -1,9 +1,7 @@
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { request, getCachePath } from "#lib";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const CACHE_FILE = join(__dirname, "electricity_cache.json");
+const CACHE_FILE = getCachePath("electricity_cache.json");
 
 const TIBBER_API_URL = "https://api.tibber.com/v1-beta/gql";
 const SHORT_WINDOW_TTL = 300; // 5 minutes (seconds)
@@ -87,17 +85,15 @@ interface TibberResponse {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Cache helpers
-// ---------------------------------------------------------------------------
-
-function loadCache(): TibberResponse | null {
+function loadCache(opts?: { allowStale?: boolean }): TibberResponse | null {
   try {
     if (!existsSync(CACHE_FILE)) return null;
 
     const raw = readFileSync(CACHE_FILE, "utf-8");
     const cache: CacheEnvelope = JSON.parse(raw);
     if (!cache.data) return null;
+
+    if (opts?.allowStale) return cache.data;
 
     const nowHour = new Date().getHours();
     const cacheAge = Date.now() / 1000 - (cache.timestamp ?? 0);
@@ -142,14 +138,14 @@ async function fetchTibberPrices(): Promise<TibberResponse | null> {
   }
 
   try {
-    const resp = await fetch(TIBBER_API_URL, {
+    const resp = await request(TIBBER_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ query: TIBBER_QUERY }),
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(1_000),
     });
 
     if (!resp.ok) {
@@ -250,7 +246,7 @@ function processResponse(data: TibberResponse): ElectricityData | null {
 // ---------------------------------------------------------------------------
 
 export async function getElectricityData(): Promise<ElectricityData | null> {
-  // 1. Try cache
+  // 1. Try fresh cache
   const cached = loadCache();
   if (cached) {
     return processResponse(cached);
@@ -263,6 +259,12 @@ export async function getElectricityData(): Promise<ElectricityData | null> {
     return processResponse(fetched);
   }
 
-  // 3. Both failed
+  // 3. Stale cache fallback
+  const stale = loadCache({ allowStale: true });
+  if (stale) {
+    console.log("Using stale electricity cache as fallback");
+    return processResponse(stale);
+  }
+
   return null;
 }

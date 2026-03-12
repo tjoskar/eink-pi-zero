@@ -6,6 +6,4 @@ main.png
 .gitignore
 .github
 .vscode
-weather_cache.json
-electricity_cache.json
-dishes_cache.json
+.cache/

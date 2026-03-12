@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
-import { getGarbageData } from "./garbage-data.ts";
-import type { CollectionEntry } from "./garbage-data.ts";
+import { getGarbageData } from "../garbage/garbage-data.ts";
+import type { CollectionEntry } from "../garbage/garbage-data.ts";
 
 const dates: CollectionEntry[] = [
   { type: "household", date: "2026-03-18" },

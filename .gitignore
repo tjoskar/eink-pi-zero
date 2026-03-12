@@ -5,9 +5,7 @@ venv
 __pycache__/
 *.pyc
 .DS_Store
-weather_cache.json
-dishes_cache.json
-electricity_cache.json
+.cache/
 *.png
 !**/__snapshots__/*.png
 *.actual.png

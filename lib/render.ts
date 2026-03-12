@@ -18,11 +18,11 @@ import { resolveColor, buildFontString } from "./theme.ts";
  * Function components are called with their props to get their element tree.
  * This continues recursively until only intrinsic elements remain.
  */
-function resolveElement(element: JSXElement): JSXElement {
+async function resolveElement(element: JSXElement): Promise<JSXElement> {
   if (typeof element.type === "function") {
     // Call the component function to get its element tree
     const componentFn = element.type as ComponentFunction;
-    const result = componentFn(element.props as Record<string, unknown>);
+    const result = await componentFn(element.props as Record<string, unknown>);
     // Recursively resolve in case it returns another component
     return resolveElement(result);
   }
@@ -38,12 +38,12 @@ function resolveElement(element: JSXElement): JSXElement {
  * - Nested arrays
  * - null/undefined (filtered out)
  */
-function flattenChildren(children: JSXChildren | undefined): JSXElement[] {
+async function flattenChildren(children: JSXChildren | undefined): Promise<JSXElement[]> {
   if (children == null) return [];
 
   const arr = Array.isArray(children) ? children : [children];
 
-  return arr
+  const filtered = arr
     .flat(Infinity)
     .filter((child): child is JSXElement => {
       // Filter out null/undefined
@@ -52,8 +52,9 @@ function flattenChildren(children: JSXChildren | undefined): JSXElement[] {
       if (typeof child === "object") return true;
       // Primitives (string/number) are handled separately
       return false;
-    })
-    .map(resolveElement);
+    });
+
+  return Promise.all(filtered.map(resolveElement));
 }
 
 /**
@@ -93,13 +94,13 @@ function getTextContent(children: JSXChildren | undefined): string {
  *
  * For text elements, height is automatically calculated from font size if not specified.
  */
-function buildLayoutTree(element: JSXElement): LayoutNode {
-  const resolved = resolveElement(element);
+async function buildLayoutTree(element: JSXElement): Promise<LayoutNode> {
+  const resolved = await resolveElement(element);
   const { type, props } = resolved;
 
   // Build children layout nodes
-  const childElements = flattenChildren(props.children);
-  const childNodes = childElements.map(buildLayoutTree);
+  const childElements = await flattenChildren(props.children);
+  const childNodes = await Promise.all(childElements.map(buildLayoutTree));
 
   // Calculate automatic height for text elements based on font size
   // Line height is approximately 1.2x font size
@@ -296,13 +297,13 @@ async function drawElement(
   layout: LayoutResult,
   canvas: Canvas,
 ): Promise<void> {
-  const resolved = resolveElement(element);
+  const resolved = await resolveElement(element);
   const { type, props } = resolved;
   const { box } = layout;
 
   // Handle fragment - just draw children
   if (type === "fragment") {
-    const childElements = flattenChildren(props.children);
+    const childElements = await flattenChildren(props.children);
     for (let i = 0; i < childElements.length; i++) {
       await drawElement(childElements[i], layout.children[i], canvas);
     }
@@ -319,7 +320,7 @@ async function drawElement(
   switch (type) {
     case "view": {
       // View is just a container - draw children
-      const childElements = flattenChildren(props.children);
+      const childElements = await flattenChildren(props.children);
       for (let i = 0; i < childElements.length; i++) {
         await drawElement(childElements[i], layout.children[i], canvas);
       }
@@ -376,7 +377,7 @@ async function drawElement(
     default: {
       // Unknown element type - try to render children anyway
       console.warn(`[Render] Unknown element type: ${type}`);
-      const childElements = flattenChildren(props.children);
+      const childElements = await flattenChildren(props.children);
       for (let i = 0; i < childElements.length; i++) {
         if (layout.children[i]) {
           await drawElement(childElements[i], layout.children[i], canvas);
@@ -425,14 +426,14 @@ async function drawElement(
  * ```
  */
 export async function render(
-  element: JSXElement,
+  element: JSXElement | Promise<JSXElement>,
   canvas: Canvas,
 ): Promise<void> {
   // Phase 1: Resolve components
-  const resolved = resolveElement(element);
+  const resolved = await resolveElement(await element);
 
   // Phase 2: Build layout tree and calculate positions
-  const layoutTree = buildLayoutTree(resolved);
+  const layoutTree = await buildLayoutTree(resolved);
   const engine = getLayoutEngine();
   const container: LayoutBox = {
     x: 0,

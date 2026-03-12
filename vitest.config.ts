@@ -2,11 +2,14 @@ import { defineConfig } from "vitest/config";
 import path from "node:path";
 
 export default defineConfig({
-  test: {
+  resolve: {
     alias: {
-      "#jsx/": path.resolve(import.meta.dirname, "jsx/lib") + "/",
+      "#lib": path.resolve(import.meta.dirname, "lib/mod.ts"),
       "#lib/": path.resolve(import.meta.dirname, "lib") + "/",
+      "#jsx/": path.resolve(import.meta.dirname, "jsx/lib") + "/",
     },
+  },
+  test: {
     projects: [
       {
         extends: true,

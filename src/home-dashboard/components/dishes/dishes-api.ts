@@ -1,9 +1,7 @@
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { request, getCachePath } from "#lib";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const CACHE_FILE = join(__dirname, "dishes_cache.json");
+const CACHE_FILE = getCachePath("dishes_cache.json");
 
 const CACHE_TTL = 3600; // 1 hour in seconds
 
@@ -12,19 +10,17 @@ interface CacheEnvelope {
   dishes: string[];
 }
 
-// ---------------------------------------------------------------------------
-// Cache helpers
-// ---------------------------------------------------------------------------
-
-function loadCache(): string[] | null {
+function loadCache(opts?: { allowStale?: boolean }): string[] | null {
   try {
     if (!existsSync(CACHE_FILE)) return null;
 
     const raw = readFileSync(CACHE_FILE, "utf-8");
     const cache: CacheEnvelope = JSON.parse(raw);
 
-    const cacheAge = Date.now() / 1000 - (cache.timestamp ?? 0);
-    if (cacheAge >= CACHE_TTL) return null;
+    if (!opts?.allowStale) {
+      const cacheAge = Date.now() / 1000 - (cache.timestamp ?? 0);
+      if (cacheAge >= CACHE_TTL) return null;
+    }
 
     const dishes = cache.dishes;
     if (!Array.isArray(dishes) || dishes.length === 0) return null;
@@ -48,16 +44,12 @@ function saveCache(dishes: string[]): void {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Fetch
-// ---------------------------------------------------------------------------
-
 async function fetchRemoteDishes(): Promise<string[] | null> {
-  const url = process.env.DISHES_API_URL ?? "https://matsedel.deno.dev";
+  const url = process.env.DISHES_API_URL!; // TODO: verify that this env is set
 
   try {
-    const resp = await fetch(url, {
-      signal: AbortSignal.timeout(10_000),
+    const resp = await request(url, {
+      signal: AbortSignal.timeout(1_000),
     });
 
     if (!resp.ok) {
@@ -77,33 +69,28 @@ async function fetchRemoteDishes(): Promise<string[] | null> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function truncate(text: string, limit: number = 40): string {
   if (text.length <= limit) return text;
   return text.slice(0, limit - 1).trimEnd() + "\u2026";
 }
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
 export async function getDishes(): Promise<string[]> {
-  // 1. Try cache
   const cached = loadCache();
   if (cached) {
     return cached.map((d) => truncate(d));
   }
 
-  // 2. Fetch from API
   const fetched = await fetchRemoteDishes();
   if (fetched) {
     saveCache(fetched);
     return fetched.map((d) => truncate(d));
   }
 
-  // 3. Both failed
+  const stale = loadCache({ allowStale: true });
+  if (stale) {
+    console.warn("Using stale dishes cache as fallback");
+    return stale.map((d) => truncate(d));
+  }
+
   return [];
 }

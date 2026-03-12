@@ -8,16 +8,13 @@
 import mqtt from "mqtt";
 import { renderApp } from "./app.tsx";
 import { DEVICES_CONFIG } from "../mqtt-device-status/devices.ts";
-import type { DeviceState } from "./components/devices.tsx";
+import { devicesState } from "./components/devices/devices.tsx";
 import {
   setTheme,
   EINK_BW_THEME,
   registerFont,
   registerIconFont,
   renderToDisplay,
-  setupGlobalErrorHandler,
-  logInfo,
-  logError,
   initHardware,
 } from "#lib";
 import { once } from "node:events";
@@ -46,12 +43,6 @@ const RENDER_DEBOUNCE_MS = 3000;
 /** Periodic refresh interval for weather/electricity/dishes data (1 hour) */
 const REFRESH_INTERVAL_MS = 3_600_000;
 
-const devices: DeviceState[] = DEVICES_CONFIG.map((d) => ({
-  label: d.label,
-  icon: d.icon,
-  on: false,
-}));
-
 let isUpdating = false;
 
 /** Disposable wrapper around a debounced update timer. */
@@ -67,7 +58,7 @@ function createDebouncedUpdater(): {
       timer = setTimeout(() => {
         timer = null;
         updateDisplay().catch((err) =>
-          logError("Render error", err instanceof Error ? err : undefined),
+          console.error("Render error", err instanceof Error ? err : undefined),
         );
       }, RENDER_DEBOUNCE_MS);
     },
@@ -83,7 +74,7 @@ function connectMqtt(
   scheduleUpdate: () => void,
 ): { client: mqtt.MqttClient } & AsyncDisposable {
   const url = `mqtt://${MQTT_HOST}:${MQTT_PORT}`;
-  logInfo(`Connecting to MQTT broker at ${url}...`);
+  console.log(`Connecting to MQTT broker at ${url}...`);
 
   const client = mqtt.connect(url, {
     username: MQTT_USER,
@@ -92,7 +83,7 @@ function connectMqtt(
 
   client.on("connect", () => {
     const topic = `${MQTT_TOPIC_PREFIX}/#`;
-    logInfo(`Connected to MQTT broker. Subscribing to ${topic}`);
+    console.log(`Connected to MQTT broker. Subscribing to ${topic}`);
     client.subscribe(topic);
   });
 
@@ -103,35 +94,40 @@ function connectMqtt(
 
     if (!isOn && !isOff) return;
 
-    const configIndex = DEVICES_CONFIG.findIndex((d) => d.topic === _topic);
+    const configIndex = DEVICES_CONFIG.findIndex(
+      (d) => _topic === `${MQTT_TOPIC_PREFIX}/${d.topic}`,
+    );
     if (configIndex === -1) return;
 
+    const devices = devicesState.get();
     const device = devices[configIndex];
     const newState = isOn;
 
     if (device.on === newState) return;
 
-    device.on = newState;
-    logInfo(`${device.label}: ${newState ? "ON" : "OFF"}`);
+    const updated = [...devices];
+    updated[configIndex] = { ...device, on: newState };
+    devicesState.set(updated);
+    console.log(`${device.label}: ${newState ? "ON" : "OFF"}`);
     scheduleUpdate();
   });
 
   client.on("error", (err) => {
-    logError("MQTT error", err);
+    console.error("MQTT error", err);
   });
 
   client.on("offline", () => {
-    logInfo("MQTT client offline");
+    console.log("MQTT client offline");
   });
 
   client.on("reconnect", () => {
-    logInfo("MQTT reconnecting...");
+    console.log("MQTT reconnecting...");
   });
 
   return {
     client,
     async [Symbol.asyncDispose]() {
-      logInfo("Disconnecting MQTT...");
+      console.log("Disconnecting MQTT...");
       await client.endAsync();
     },
   };
@@ -139,17 +135,17 @@ function connectMqtt(
 
 async function updateDisplay(): Promise<void> {
   if (isUpdating) {
-    logInfo("Skipping update — render already in progress");
+    console.log("Skipping update — render already in progress");
     return;
   }
 
   isUpdating = true;
   try {
-    const imageBuffer = await renderApp(devices);
+    const imageBuffer = await renderApp();
     await renderToDisplay(imageBuffer, { fast: true });
-    logInfo("Display updated");
+    console.log("Display updated");
   } catch (error) {
-    logError(
+    console.error(
       "Failed to update display",
       error instanceof Error ? error : undefined,
     );
@@ -162,11 +158,11 @@ async function main(): Promise<void> {
   // Resources are disposed in reverse order when main() returns or throws
   using _hardware = await initHardware();
 
-  logInfo("Rendering initial dashboard...");
+  console.log("Rendering initial dashboard...");
   await updateDisplay();
 
   if (RENDER_ONCE) {
-    logInfo("Render-once mode — exiting.");
+    console.log("Render-once mode — exiting.");
     return;
   }
 
@@ -175,9 +171,9 @@ async function main(): Promise<void> {
   await using _mqtt = connectMqtt(debouncer.schedule);
 
   using _refresh = setInterval(() => {
-    logInfo("Periodic refresh triggered");
+    console.log("Periodic refresh triggered");
     updateDisplay().catch((err) =>
-      logError("Periodic refresh error", err instanceof Error ? err : undefined),
+      console.error("Periodic refresh error", err instanceof Error ? err : undefined),
     );
   }, REFRESH_INTERVAL_MS);
 
@@ -187,10 +183,10 @@ async function main(): Promise<void> {
     once(process, "SIGHUP"),
   ]);
 
-  logInfo("Shutting down...");
+  console.log("Shutting down...");
 }
 
 main().catch((error) => {
-  logError("Fatal error", error instanceof Error ? error : undefined);
+  console.error("Fatal error", error instanceof Error ? error : undefined);
   process.exit(1);
 });

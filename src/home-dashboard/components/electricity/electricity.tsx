@@ -6,7 +6,7 @@
  */
 
 import { jsx, LineChart } from "#lib";
-import type { ElectricityData } from "../data/electricity-api.ts";
+import { getElectricityData, type ElectricityData } from "./electricity-api.ts";
 
 function ConsumptionBar({
   value,
@@ -84,11 +84,12 @@ function ConsumptionChart({ data }: { data: ElectricityData }) {
   );
 }
 
-export function ElectricitySection({
-  data,
-}: {
-  data: ElectricityData | null;
-}) {
+export async function ElectricitySection() {
+  const data = await getElectricityData().catch((err) => {
+    console.error("Electricity fetch failed:", err);
+    return null;
+  });
+
   if (!data) {
     return (
       <view>

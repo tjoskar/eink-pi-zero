@@ -25,7 +25,7 @@ export interface JSXElement {
 }
 
 /** A function component */
-export type ComponentFunction = (props: Record<string, unknown>) => JSXElement;
+export type ComponentFunction = (props: Record<string, unknown>) => JSXElement | Promise<JSXElement>;
 
 // =============================================================================
 // Element Props
@@ -129,8 +129,8 @@ export type ElementProps = ViewProps | TextProps | ImageProps | LineChartProps;
  */
 declare global {
   namespace JSX {
-    // The type returned by JSX expressions
-    type Element = JSXElement;
+    // The type returned by JSX expressions (includes Promise for async components)
+    type Element = JSXElement | Promise<JSXElement>;
 
     // Props for intrinsic elements (lowercase tags)
     interface IntrinsicElements {
