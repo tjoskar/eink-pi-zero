@@ -6,7 +6,8 @@
  * e-ink dashboard display.
  */
 import { renderApp } from "./app.tsx";
-import { connectMqtt, validateMqttEnv } from "./mqtt.ts";
+import { connectMqtt } from "./mqtt.ts";
+import { config } from "./config.ts";
 import {
   devicesState,
   ENGINE_HEATER_TOPIC,
@@ -27,8 +28,6 @@ import { once } from "node:events";
 setTheme({ ...EINK_BW_THEME, defaultFont: "Noto Sans" });
 registerFont("./fonts/noto-sans-regular.ttf", "Noto Sans");
 registerIconFont();
-
-const RENDER_ONCE = process.env.RENDER_ONCE === "1";
 
 const ENGINE_HEATER_BUTTON_PIN = 21;
 const ENGINE_HEATER_LED_PIN = 13;
@@ -65,12 +64,10 @@ async function main(): Promise<void> {
   console.log("Rendering initial dashboard...");
   await updateDisplay();
 
-  if (RENDER_ONCE) {
+  if (config.renderOnce) {
     console.log("Render-once mode — exiting.");
     return;
   }
-
-  validateMqttEnv();
 
   await using mqtt = connectMqtt({
     onMessage(topic, value) {

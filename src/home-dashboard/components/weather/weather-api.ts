@@ -13,14 +13,7 @@
 
 import { getWeatherIconName } from "./weather-icons.ts";
 import { fetchJson, createCache } from "#lib";
-
-const API_KEY = process.env.WEATHER_API_KEY ?? "";
-const LAT = process.env.WEATHER_LAT ?? "59.3293";
-const LON = process.env.WEATHER_LON ?? "18.0686";
-const UNITS = process.env.WEATHER_UNITS ?? "metric";
-const LANG = process.env.WEATHER_LANG ?? "en";
-const CACHE_DURATION_S = Number(process.env.CACHE_DURATION ?? 3600);
-const API_TIMEOUT_MS = Number(process.env.API_TIMEOUT ?? 10_000);
+import { config } from "../../config.ts";
 
 const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -46,17 +39,19 @@ export interface WeatherDisplayData {
 
 const cache = createCache<Record<string, unknown>>({
   file: "weather_cache.json",
-  ttlSeconds: CACHE_DURATION_S,
+  get ttlSeconds() {
+    return config.cacheDuration;
+  },
   label: "Weather",
 });
 
 async function fetchFromApi(): Promise<Record<string, unknown> | null> {
   const url =
     `https://api.openweathermap.org/data/3.0/onecall` +
-    `?lat=${LAT}&lon=${LON}&units=${UNITS}&lang=${LANG}&appid=${API_KEY}`;
+    `?lat=${config.weatherLat}&lon=${config.weatherLon}&units=${config.weatherUnits}&lang=${config.weatherLang}&appid=${config.weatherApiKey}`;
 
   return fetchJson<Record<string, unknown>>(url, {
-    timeout: API_TIMEOUT_MS,
+    timeout: config.apiTimeout,
     label: "Weather",
   });
 }

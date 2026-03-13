@@ -9,6 +9,9 @@ import {
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertSnapshot } from "../../test/snapshot-utils.ts";
+import { overrideConfig } from "./config.ts";
+import { renderApp } from "./app.tsx";
+import { devicesState } from "./components/devices/devices.tsx";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SNAPSHOTS_DIR = join(__dirname, "__snapshots__");
@@ -39,10 +42,11 @@ vi.mock("node:fs", async (importOriginal) => {
 let restoreRequest: () => void;
 
 beforeAll(() => {
-  // Set env vars so API clients don't bail before calling request()
-  process.env.TIBBER_TOKEN = "test-token";
-  process.env.WEATHER_API_KEY = "test-key";
-  process.env.DISHES_API_URL = "https://matsedel.example.com/api";
+  overrideConfig({
+    tibberToken: "test-token",
+    weatherApiKey: "test-key",
+    dishesApiUrl: "https://matsedel.example.com/api",
+  });
   setTheme({ ...EINK_BW_THEME, defaultFont: "Noto Sans" });
   registerFont("./fonts/noto-sans-regular.ttf", "Noto Sans");
   registerIconFont();
@@ -69,15 +73,9 @@ beforeAll(() => {
 afterAll(() => {
   restoreRequest();
   vi.useRealTimers();
-  delete process.env.TIBBER_TOKEN;
-  delete process.env.WEATHER_API_KEY;
-  delete process.env.DISHES_API_URL;
 });
 
 test("home dashboard renders consistently", async () => {
-  const { renderApp } = await import("./app.tsx");
-  const { devicesState } = await import("./components/devices/devices.tsx");
-
   devicesState.set(new Map([
     ["test/washing_machine", { label: "Washing Machine", icon: "local_laundry_service", on: true }],
     ["test/dryer", { label: "Dryer", icon: "dry_cleaning", on: false }],

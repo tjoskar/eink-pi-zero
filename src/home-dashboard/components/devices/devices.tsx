@@ -5,11 +5,10 @@
  * matching the mqtt-device-status pattern.
  */
 import { jsx, Icon, createState } from "#lib";
+import { config } from "../../config.ts";
 
-const MQTT_TOPIC_PREFIX = process.env.MQTT_TOPIC_PREFIX ?? "";
-
-export const ENGINE_HEATER_TOPIC = `${MQTT_TOPIC_PREFIX}/statechange/engine_heater`;
-export const ENGINE_HEATER_REQUEST_TOPIC = `${MQTT_TOPIC_PREFIX}/statechange/request/engine_heater`;
+export const ENGINE_HEATER_TOPIC = `${config.mqttTopicPrefix}/statechange/engine_heater`;
+export const ENGINE_HEATER_REQUEST_TOPIC = `${config.mqttTopicPrefix}/statechange/request/engine_heater`;
 
 export interface DeviceState {
   label: string;
@@ -18,10 +17,10 @@ export interface DeviceState {
 }
 
 const initialDevices = new Map<string, DeviceState>([
-  [`${MQTT_TOPIC_PREFIX}/statechange/washing_machine`, { label: "Washing Machine", icon: "local_laundry_service", on: false }],
-  [`${MQTT_TOPIC_PREFIX}/statechange/dryer`, { label: "Dryer", icon: "dry_cleaning", on: false }],
-  [`${MQTT_TOPIC_PREFIX}/statechange/engine_heater`, { label: "Engine Heater", icon: "local_fire_department", on: false }],
-  [`${MQTT_TOPIC_PREFIX}/statechange/bike_charger`, { label: "Bike Charger", icon: "electric_bike", on: false }],
+  [`${config.mqttTopicPrefix}/statechange/washing_machine`, { label: "Washing Machine", icon: "local_laundry_service", on: false }],
+  [`${config.mqttTopicPrefix}/statechange/dryer`, { label: "Dryer", icon: "dry_cleaning", on: false }],
+  [`${config.mqttTopicPrefix}/statechange/engine_heater`, { label: "Engine Heater", icon: "local_fire_department", on: false }],
+  [`${config.mqttTopicPrefix}/statechange/bike_charger`, { label: "Bike Charger", icon: "electric_bike", on: false }],
 ]);
 
 export const devicesState = createState(initialDevices);

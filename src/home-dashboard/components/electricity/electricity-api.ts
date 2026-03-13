@@ -1,4 +1,5 @@
 import { fetchJson, createCache } from "#lib";
+import { config } from "../../config.ts";
 
 const TIBBER_API_URL = "https://api.tibber.com/v1-beta/gql";
 const SHORT_WINDOW_TTL = 300; // 5 minutes (seconds)
@@ -89,7 +90,7 @@ const cache = createCache<TibberResponse>({
 });
 
 async function fetchTibberPrices(): Promise<TibberResponse | null> {
-  const token = process.env.TIBBER_TOKEN;
+  const token = config.tibberToken;
   if (!token) {
     console.error("TIBBER_TOKEN not set");
     return null;
