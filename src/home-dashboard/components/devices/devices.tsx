@@ -8,6 +8,9 @@ import { jsx, Icon, createState } from "#lib";
 
 const MQTT_TOPIC_PREFIX = process.env.MQTT_TOPIC_PREFIX ?? "";
 
+export const ENGINE_HEATER_TOPIC = `${MQTT_TOPIC_PREFIX}/statechange/engine_heater`;
+export const ENGINE_HEATER_REQUEST_TOPIC = `${MQTT_TOPIC_PREFIX}/statechange/request/engine_heater`;
+
 export interface DeviceState {
   label: string;
   icon: string;

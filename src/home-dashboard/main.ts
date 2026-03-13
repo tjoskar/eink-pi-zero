@@ -7,7 +7,11 @@
  */
 import { renderApp } from "./app.tsx";
 import { connectMqtt, validateMqttEnv } from "./mqtt.ts";
-import { devicesState } from "./components/devices/devices.tsx";
+import {
+  devicesState,
+  ENGINE_HEATER_TOPIC,
+  ENGINE_HEATER_REQUEST_TOPIC,
+} from "./components/devices/devices.tsx";
 import {
   setTheme,
   EINK_BW_THEME,
@@ -15,6 +19,8 @@ import {
   registerIconFont,
   renderToDisplay,
   initHardware,
+  onButtonPress,
+  setLed,
 } from "#lib";
 import { once } from "node:events";
 
@@ -23,6 +29,9 @@ registerFont("./fonts/noto-sans-regular.ttf", "Noto Sans");
 registerIconFont();
 
 const RENDER_ONCE = process.env.RENDER_ONCE === "1";
+
+const ENGINE_HEATER_BUTTON_PIN = 21;
+const ENGINE_HEATER_LED_PIN = 13;
 
 /** Periodic refresh interval for weather/electricity/dishes data (1 hour) */
 const REFRESH_INTERVAL_MS = 3_600_000;
@@ -63,7 +72,7 @@ async function main(): Promise<void> {
 
   validateMqttEnv();
 
-  await using _mqtt = connectMqtt({
+  await using mqtt = connectMqtt({
     onMessage(topic, value) {
       const devices = devicesState.get();
       const device = devices.get(topic);
@@ -72,11 +81,39 @@ async function main(): Promise<void> {
       if (device.on === on) return;
       devicesState.set(new Map(devices).set(topic, { ...device, on }));
       console.log(`${device.label}: ${on ? "ON" : "OFF"}`);
+
+      if (topic === ENGINE_HEATER_TOPIC) {
+        setLed(ENGINE_HEATER_LED_PIN, on).catch((err) =>
+          console.error("LED error", err instanceof Error ? err : undefined),
+        );
+      }
     },
     onUpdate: () =>
       updateDisplay().catch((err) =>
         console.error("Render error", err instanceof Error ? err : undefined),
       ),
+  });
+
+  await onButtonPress(ENGINE_HEATER_BUTTON_PIN, () => {
+    const devices = devicesState.get();
+    const device = devices.get(ENGINE_HEATER_TOPIC);
+    if (!device) return;
+
+    const newOn = !device.on;
+
+    mqtt.publish(ENGINE_HEATER_REQUEST_TOPIC, newOn ? "on" : "off");
+    devicesState.set(
+      new Map(devices).set(ENGINE_HEATER_TOPIC, { ...device, on: newOn }),
+    );
+    console.log(`Button: Engine Heater → ${newOn ? "ON" : "OFF"}`);
+
+    setLed(ENGINE_HEATER_LED_PIN, newOn).catch((err) =>
+      console.error("LED error", err instanceof Error ? err : undefined),
+    );
+
+    updateDisplay().catch((err) =>
+      console.error("Render error", err instanceof Error ? err : undefined),
+    );
   });
 
   using _refresh = setInterval(() => {

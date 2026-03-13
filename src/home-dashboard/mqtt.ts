@@ -39,7 +39,7 @@ function createDebouncedUpdater(onUpdate: () => void): {
 export function connectMqtt(opts: {
   onMessage: (topic: string, value: string) => void;
   onUpdate: () => void;
-}): AsyncDisposable {
+}): { publish: (topic: string, payload: string) => void } & AsyncDisposable {
   const url = `mqtt://${MQTT_HOST}:${MQTT_PORT}`;
   console.log(`Connecting to MQTT broker at ${url}...`);
 
@@ -76,6 +76,9 @@ export function connectMqtt(opts: {
   });
 
   return {
+    publish(topic: string, payload: string) {
+      client.publish(topic, payload);
+    },
     async [Symbol.asyncDispose]() {
       debouncer[Symbol.dispose]();
       console.log("Disconnecting MQTT...");
