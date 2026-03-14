@@ -19,7 +19,7 @@ async function main(): Promise<void> {
 
   console.log("Render to display");
   using hardware = await initHardware();
-  await renderToDisplay(imageBuffer, { fast: true });
+  await renderToDisplay(imageBuffer);
 }
 
 export async function renderApp(): Promise<Buffer> {

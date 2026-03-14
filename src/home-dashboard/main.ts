@@ -46,7 +46,7 @@ async function updateDisplay(): Promise<void> {
   isUpdating = true;
   try {
     const imageBuffer = await renderApp();
-    await renderToDisplay(imageBuffer, { fast: true });
+    await renderToDisplay(imageBuffer);
     console.log("Display updated");
   } catch (error) {
     console.error(

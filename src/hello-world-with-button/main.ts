@@ -50,7 +50,7 @@ async function updateDisplay(): Promise<void> {
       lastUpdate: new Date(),
     });
 
-    await renderToDisplay(imageBuffer, { fast: true });
+    await renderToDisplay(imageBuffer);
     console.log("Display updated successfully");
   } catch (error) {
     console.log(

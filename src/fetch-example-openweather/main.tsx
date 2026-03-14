@@ -35,7 +35,7 @@ async function main(): Promise<void> {
   const imageBuffer = await renderApp();
 
   console.log("Sending to display...");
-  await renderToDisplay(imageBuffer, { fast: false });
+  await renderToDisplay(imageBuffer);
   console.log("Done.");
 }
 

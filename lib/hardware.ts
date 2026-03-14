@@ -23,6 +23,9 @@ const GPIO_COMMAND_TIMEOUT_MS = 5_000;
 /** Timeout for render commands (ms) */
 const RENDER_COMMAND_TIMEOUT_MS = 30_000;
 
+/** How often (in render count) to use normal init instead of fast */
+const NORMAL_INIT_INTERVAL = 6;
+
 /** Path to the Python hardware daemon script */
 const HARDWARE_DAEMON_SCRIPT = join(
   import.meta.dirname,
@@ -65,6 +68,9 @@ const pendingCommands = new Map<
 /** Promise that resolves when daemon is ready */
 let daemonReadyPromise: Promise<void> | null = null;
 let daemonReadyResolve: (() => void) | null = null;
+
+/** Render counter for automatic init-mode cycling */
+let renderCount = 0;
 
 /**
  * Send a command to the daemon.
@@ -300,6 +306,9 @@ function cleanup(): void {
   }
   pendingCommands.clear();
 
+  // Reset render counter so next startup does a full clear
+  renderCount = 0;
+
   // Restore terminal and release stdin in mock mode
   if (IS_MOCK) {
     if (process.stdin.isTTY) {
@@ -364,10 +373,16 @@ export async function renderToDisplay(
   imageBuffer: Buffer,
   options: RenderOptions = {},
 ): Promise<void> {
+  // Resolve render mode: first render clears, then cycle 5 fast / 1 normal
+  const { fast, clear } = resolveRenderOptions(options);
+  const mode =
+    clear ? "clear + normal" : fast ? "fast" : "normal";
+
   if (IS_MOCK) {
     const imagePath = "preview.png";
     await writeFile(imagePath, imageBuffer);
-    console.log(`[hardware] Mock render: ${imagePath}`);
+    console.log(`[hardware] Mock render #${renderCount} (${mode}): ${imagePath}`);
+    renderCount++;
     return;
   }
 
@@ -380,13 +395,43 @@ export async function renderToDisplay(
     {
       cmd: "render",
       path: imagePath,
-      fast: options.fast ?? false,
-      clear: options.clear ?? false,
+      fast,
+      clear,
     },
     RENDER_COMMAND_TIMEOUT_MS,
   );
 
-  console.log("[hardware] Render complete");
+  console.log(`[hardware] Render #${renderCount} complete (${mode})`);
+  renderCount++;
+}
+
+/**
+ * Determine effective render options based on the render counter.
+ *
+ * - Render 0: clear + normal init (startup)
+ * - Every (FAST_RENDERS_BEFORE_NORMAL + 1)th render after that: normal init
+ * - Otherwise: fast init
+ *
+ * Explicit values in `options` override the automatic behaviour.
+ */
+function resolveRenderOptions(options: RenderOptions): {
+  fast: boolean;
+  clear: boolean;
+} {
+  if (options.fast !== undefined || options.clear !== undefined) {
+    return { fast: options.fast ?? false, clear: options.clear ?? false };
+  }
+
+  if (renderCount === 0) {
+    return { fast: false, clear: true };
+  }
+
+  // After startup, cycle: 5 fast, 1 normal, 5 fast, 1 normal, ...
+  if (renderCount % NORMAL_INIT_INTERVAL === 0) {
+    return { fast: false, clear: false };
+  }
+
+  return { fast: true, clear: false };
 }
 
 /** Hardware daemon handle for use with `using` keyword */
