@@ -16,7 +16,7 @@ if [ -z "$1" ]; then
 fi
 
 TARGET="$1"
-REMOTE_DIR="~/eink-pi-zero"
+REMOTE_DIR="~/control-panel"
 
 echo "=== Building ==="
 pnpm run build
@@ -31,6 +31,7 @@ rsync -avz --progress \
   --include='fonts/***' \
   --include='python/***' \
   --include='scripts/***' \
+  --include='.env' \
   --exclude='*' \
   ./ "$TARGET:$REMOTE_DIR/"
 
@@ -41,4 +42,4 @@ echo "On your Pi, run:"
 echo "  cd $REMOTE_DIR"
 echo "  pnpm install --prod"
 echo "  sudo ./scripts/setup-pi.sh  # First time only"
-echo "  node --enable-source-maps dist/hello-world.js"
+echo "  node --env-file=.env --enable-source-maps dist/home-dashboard/main.js"

@@ -23,7 +23,7 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-USER_HOME="/home/oskar"
+USER_HOME="/home/tjoskar"
 
 echo "Project directory: $PROJECT_DIR"
 echo
@@ -52,13 +52,13 @@ echo "  Dependencies installed"
 # 3. Create log directory
 echo "→ Creating log directory..."
 mkdir -p "$USER_HOME/control-panel/logs"
-chown -R oskar:oskar "$USER_HOME/control-panel"
+chown -R tjoskar:tjoskar "$USER_HOME/control-panel"
 echo "  Log directory created: $USER_HOME/control-panel/logs"
 
 # 4. Create temp directory
 echo "→ Creating temp directory..."
 mkdir -p /tmp/eink-panel
-chown oskar:oskar /tmp/eink-panel
+chown tjoskar:tjoskar /tmp/eink-panel
 echo "  Temp directory created: /tmp/eink-panel"
 
 # 5. Install systemd service
@@ -74,7 +74,7 @@ echo "  Logrotate config installed"
 
 # 7. Add user to gpio and spi groups
 echo "→ Adding user to gpio and spi groups..."
-usermod -aG gpio,spi oskar 2>/dev/null || true
+usermod -aG gpio,spi tjoskar 2>/dev/null || true
 echo "  User added to groups"
 
 echo
@@ -88,5 +88,5 @@ echo "  3. Enable on boot: sudo systemctl enable eink-panel"
 echo "  4. View logs: journalctl -u eink-panel -f"
 echo
 echo "To manually run:"
-echo "  cd $PROJECT_DIR && node --enable-source-maps dist/hello-world.js"
+echo "  cd $PROJECT_DIR && node --env-file=.env --enable-source-maps dist/home-dashboard/main.js"
 echo "════════════════════════════════════════"
