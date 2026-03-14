@@ -49,10 +49,7 @@ async function updateDisplay(): Promise<void> {
     await renderToDisplay(imageBuffer);
     console.log("Display updated");
   } catch (error) {
-    console.error(
-      "Failed to update display",
-      error instanceof Error ? error : undefined,
-    );
+    console.error("Failed to update display", error instanceof Error ? error : undefined);
   } finally {
     isUpdating = false;
   }
@@ -99,9 +96,7 @@ async function main(): Promise<void> {
     const newOn = !device.on;
 
     mqtt.publish(ENGINE_HEATER_REQUEST_TOPIC, newOn ? "on" : "off");
-    devicesState.set(
-      new Map(devices).set(ENGINE_HEATER_TOPIC, { ...device, on: newOn }),
-    );
+    devicesState.set(new Map(devices).set(ENGINE_HEATER_TOPIC, { ...device, on: newOn }));
     console.log(`Button: Engine Heater → ${newOn ? "ON" : "OFF"}`);
 
     setLed(ENGINE_HEATER_LED_PIN, newOn).catch((err) =>
@@ -120,11 +115,7 @@ async function main(): Promise<void> {
     );
   }, REFRESH_INTERVAL_MS);
 
-  await Promise.race([
-    once(process, "SIGINT"),
-    once(process, "SIGTERM"),
-    once(process, "SIGHUP"),
-  ]);
+  await Promise.race([once(process, "SIGINT"), once(process, "SIGTERM"), once(process, "SIGHUP")]);
 
   console.log("Shutting down...");
 }

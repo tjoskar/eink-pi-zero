@@ -6,11 +6,7 @@
  */
 
 import { jsx, Icon } from "#lib";
-import {
-  getWeatherDisplayData,
-  type WeatherDisplayData,
-  type ForecastDay,
-} from "./weather-api.ts";
+import { getWeatherDisplayData, type WeatherDisplayData, type ForecastDay } from "./weather-api.ts";
 
 const DETAIL_ICONS = {
   wind: "wind_power",

@@ -73,14 +73,7 @@ function Forecast({ days }: { days: ForecastDay[] }) {
 
 function App({ data }: { data: WeatherDisplayData }) {
   return (
-    <view
-      width={800}
-      height={480}
-      padding={16}
-      direction="column"
-      gap={12}
-      background="white"
-    >
+    <view width={800} height={480} padding={16} direction="column" gap={12} background="white">
       <CurrentWeather data={data.current} />
       <Forecast days={data.forecast} />
     </view>

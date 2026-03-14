@@ -18,13 +18,7 @@
  */
 
 import { renderApp } from "./app.tsx";
-import {
-  renderToDisplay,
-  registerFont,
-  registerIconFont,
-  setTheme,
-  EINK_BW_THEME,
-} from "#lib";
+import { renderToDisplay, registerFont, registerIconFont, setTheme, EINK_BW_THEME } from "#lib";
 
 setTheme({ ...EINK_BW_THEME, defaultFont: "Noto Sans" });
 registerFont("./fonts/noto-sans-regular.ttf", "Noto Sans");

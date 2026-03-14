@@ -20,13 +20,7 @@
 import { YogaLayoutEngine } from "./yoga-engine.ts";
 import type { LayoutEngine } from "./types.ts";
 
-export type {
-  LayoutEngine,
-  LayoutNode,
-  LayoutBox,
-  LayoutResult,
-  LayoutStyle,
-} from "./types.ts";
+export type { LayoutEngine, LayoutNode, LayoutBox, LayoutResult, LayoutStyle } from "./types.ts";
 export { YogaLayoutEngine } from "./yoga-engine.ts";
 
 let currentEngine: LayoutEngine | null = null;

@@ -153,9 +153,7 @@ function processResponse(data: TibberResponse): ElectricityData | null {
 
     // Current price
     const currentPrice =
-      highlightIndex >= 0 && highlightIndex < prices.length
-        ? prices[highlightIndex]
-        : 0;
+      highlightIndex >= 0 && highlightIndex < prices.length ? prices[highlightIndex] : 0;
 
     // Consumption nodes
     const nodes = homes[0].consumption?.nodes ?? [];

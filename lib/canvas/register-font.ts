@@ -59,10 +59,7 @@ const DEFAULT_ICON_FONT_PATH = "./fonts/material-icons.woff";
  * registerFont("./fonts/my-font-bold.ttf", "My Font Bold");
  * ```
  */
-export function registerFont(
-  fontPath: string,
-  family: string,
-): void {
+export function registerFont(fontPath: string, family: string): void {
   const resolvedPath = path.resolve(fontPath);
 
   if (!fs.existsSync(resolvedPath)) {

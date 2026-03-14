@@ -52,7 +52,8 @@ beforeAll(() => {
   registerIconFont();
 
   const mockFetch: RequestFn = async (input, init) => {
-    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+    const url =
+      typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 
     if (url.includes("openweathermap.org")) {
       return Response.json(MOCK_OPENWEATHER_RESPONSE);
@@ -76,12 +77,17 @@ afterAll(() => {
 });
 
 test("home dashboard renders consistently", async () => {
-  devicesState.set(new Map([
-    ["test/washing_machine", { label: "Washing Machine", icon: "local_laundry_service", on: true }],
-    ["test/dryer", { label: "Dryer", icon: "dry_cleaning", on: false }],
-    ["test/engine_heater", { label: "Engine Heater", icon: "local_fire_department", on: true }],
-    ["test/bike_charger", { label: "Bike Charger", icon: "electric_bike", on: false }],
-  ]));
+  devicesState.set(
+    new Map([
+      [
+        "test/washing_machine",
+        { label: "Washing Machine", icon: "local_laundry_service", on: true },
+      ],
+      ["test/dryer", { label: "Dryer", icon: "dry_cleaning", on: false }],
+      ["test/engine_heater", { label: "Engine Heater", icon: "local_fire_department", on: true }],
+      ["test/bike_charger", { label: "Bike Charger", icon: "electric_bike", on: false }],
+    ]),
+  );
 
   const actualPng = await renderApp();
 

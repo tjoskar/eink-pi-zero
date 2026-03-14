@@ -2,7 +2,16 @@
  * Hello World example.
  */
 import { App } from "./app.tsx";
-import { jsx, Canvas, render, registerFont, setTheme, EINK_BW_THEME, renderToDisplay, initHardware } from "#lib";
+import {
+  jsx,
+  Canvas,
+  render,
+  registerFont,
+  setTheme,
+  EINK_BW_THEME,
+  renderToDisplay,
+  initHardware,
+} from "#lib";
 
 // Configure theme with custom default font
 setTheme({

@@ -58,13 +58,7 @@ export function App({ buttonPresses, lastUpdate }: AppProps) {
       </view>
 
       {/* Status */}
-      <view
-        direction="column"
-        gap={16}
-        padding={24}
-        align="start"
-        background="white"
-      >
+      <view direction="column" gap={16} padding={24} align="start" background="white">
         <view direction="row" gap={16} align="center">
           <text size={24} color="darkGray">
             Date: {dateStr}

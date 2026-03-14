@@ -64,22 +64,11 @@ export interface IconProps {
  * <Icon name="warning" size={48} color="darkGray" />
  * ```
  */
-export function Icon({
-  name,
-  size = 24,
-  color = "black",
-  alignSelf,
-}: IconProps): JSX.Element {
+export function Icon({ name, size = 24, color = "black", alignSelf }: IconProps): JSX.Element {
   const char = getIconChar(name);
 
   return (
-    <text
-      size={size}
-      width={size}
-      font={ICON_FONT_FAMILY}
-      color={color}
-      alignSelf={alignSelf}
-    >
+    <text size={size} width={size} font={ICON_FONT_FAMILY} color={color} alignSelf={alignSelf}>
       {char}
     </text>
   );

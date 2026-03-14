@@ -227,10 +227,7 @@ async function startHardwareDaemon(): Promise<void> {
   await Promise.race([
     daemonReadyPromise,
     new Promise<void>((_, reject) =>
-      setTimeout(
-        () => reject(new Error("Hardware daemon startup timeout")),
-        5000,
-      ),
+      setTimeout(() => reject(new Error("Hardware daemon startup timeout")), 5000),
     ),
   ]);
 }
@@ -274,9 +271,7 @@ function setupMockButton(): void {
     }
   });
 
-  console.log(
-    "[hardware] Mock button ready - press 'b' to simulate button press",
-  );
+  console.log("[hardware] Mock button ready - press 'b' to simulate button press");
 }
 
 /**
@@ -325,10 +320,7 @@ function cleanup(): void {
  * @param pin - GPIO pin number
  * @param callback - Function to call when button is pressed
  */
-export async function onButtonPress(
-  pin: number,
-  callback: ButtonCallback,
-): Promise<void> {
+export async function onButtonPress(pin: number, callback: ButtonCallback): Promise<void> {
   // Register callback
   const existing = buttonCallbacks.get(pin) || [];
   existing.push(callback);
@@ -375,8 +367,7 @@ export async function renderToDisplay(
 ): Promise<void> {
   // Resolve render mode: first render clears, then cycle 5 fast / 1 normal
   const { fast, clear } = resolveRenderOptions(options);
-  const mode =
-    clear ? "clear + normal" : fast ? "fast" : "normal";
+  const mode = clear ? "clear + normal" : fast ? "fast" : "normal";
 
   if (IS_MOCK) {
     const imagePath = "preview.png";

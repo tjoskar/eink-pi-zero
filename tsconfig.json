@@ -15,14 +15,9 @@
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
     "paths": {
-      "#lib": ["./lib/mod.ts"],
+      "#lib": ["./lib/mod.ts"]
     }
   },
-  "include": [
-    "lib/**/*",
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-  ]
+  "include": ["lib/**/*", "src/**/*"],
+  "exclude": ["node_modules"]
 }

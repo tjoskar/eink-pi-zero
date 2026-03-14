@@ -97,9 +97,7 @@ async function handleCommand(line: string): Promise<boolean> {
         return false;
 
       default:
-        console.log(
-          `Unknown command: ${cmd}. Type "help" for available commands.`,
-        );
+        console.log(`Unknown command: ${cmd}. Type "help" for available commands.`);
     }
   } catch (err) {
     console.error(`Error: ${err instanceof Error ? err.message : err}`);
@@ -115,9 +113,7 @@ async function main(): Promise<void> {
 
   // Check if running in mock mode
   if (process.env.MOCK === "1") {
-    console.log(
-      "Running in MOCK mode - hardware commands will be simulated.\n",
-    );
+    console.log("Running in MOCK mode - hardware commands will be simulated.\n");
   }
 
   // Start the daemon

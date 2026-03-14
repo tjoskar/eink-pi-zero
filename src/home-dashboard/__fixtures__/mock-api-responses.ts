@@ -15,7 +15,7 @@ export const MOCK_OPENWEATHER_RESPONSE = {
     weather: [{ id: 802, main: "Clouds", description: "scattered clouds", icon: "03d" }],
     wind_speed: 3.8,
     sunrise: SAT_NOON - 6 * 3600 + 1080, // ~06:18
-    sunset: SAT_NOON + 5 * 3600 + 3900,   // ~17:05
+    sunset: SAT_NOON + 5 * 3600 + 3900, // ~17:05
     uvi: 1.5,
   },
   hourly: Array.from({ length: 24 }, (_, i) => ({
@@ -35,7 +35,11 @@ export const MOCK_OPENWEATHER_RESPONSE = {
   ],
 };
 
-function makePriceEntries(baseDate: Date, count: number, basePrice: number): Array<{
+function makePriceEntries(
+  baseDate: Date,
+  count: number,
+  basePrice: number,
+): Array<{
   total: number;
   startsAt: string;
   level: string;
@@ -44,7 +48,7 @@ function makePriceEntries(baseDate: Date, count: number, basePrice: number): Arr
     const d = new Date(baseDate);
     d.setHours(i, 0, 0, 0);
     // Vary price: cheaper at night, expensive midday
-    const variation = Math.sin((i - 6) * Math.PI / 12) * 0.3;
+    const variation = Math.sin(((i - 6) * Math.PI) / 12) * 0.3;
     const total = basePrice + variation;
     let level = "NORMAL";
     if (total < 0.3) level = "CHEAP";

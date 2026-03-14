@@ -19,14 +19,7 @@ import { LastUpdate } from "./components/last-update.tsx";
 
 function App() {
   return (
-    <view
-      width={800}
-      height={480}
-      padding={16}
-      direction="row"
-      gap={0}
-      background="white"
-    >
+    <view width={800} height={480} padding={16} direction="row" gap={0} background="white">
       {/* Left column — device status icons */}
       <view width={72} direction="column">
         <DeviceColumn />

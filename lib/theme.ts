@@ -35,13 +35,7 @@ export type EinkBWColor = "black" | "darkGray" | "lightGray" | "white";
 /**
  * Extended colors for 7-color e-ink displays (e.g., Waveshare 7-color).
  */
-export type EinkColorPalette =
-  | EinkBWColor
-  | "red"
-  | "green"
-  | "blue"
-  | "yellow"
-  | "orange";
+export type EinkColorPalette = EinkBWColor | "red" | "green" | "blue" | "yellow" | "orange";
 
 /**
  * Color type that can be either a palette color or a custom hex value.
@@ -71,10 +65,10 @@ export const EINK_BW_THEME: Theme<EinkBWColor> = {
   defaultFont: "Noto Sans",
   defaultFontSize: 16,
   colors: {
-    black: "#000000",    // 0
+    black: "#000000", // 0
     darkGray: "#555555", // 85
     lightGray: "#AAAAAA", // 170
-    white: "#FFFFFF",    // 255
+    white: "#FFFFFF", // 255
   },
 };
 
@@ -86,10 +80,10 @@ export const EINK_COLOR_THEME: Theme<EinkColorPalette> = {
   defaultFont: "Noto Sans",
   defaultFontSize: 16,
   colors: {
-    black: "#000000",    // 0
+    black: "#000000", // 0
     darkGray: "#555555", // 85
     lightGray: "#AAAAAA", // 170
-    white: "#FFFFFF",    // 255
+    white: "#FFFFFF", // 255
     red: "#FF0000",
     green: "#00FF00",
     blue: "#0000FF",
@@ -170,11 +164,7 @@ export function resolveColor(color: string): string {
  * @param weight - Optional font weight ("bold", "normal", etc.)
  * @returns CSS font string like "bold 24px Noto Sans"
  */
-export function buildFontString(
-  size?: number,
-  font?: string,
-  weight?: "normal" | "bold",
-): string {
+export function buildFontString(size?: number, font?: string, weight?: "normal" | "bold"): string {
   const fontSize = size ?? currentTheme.defaultFontSize;
   const fontFamily = font ?? currentTheme.defaultFont;
   const fontWeight = weight ? `${weight} ` : "";

@@ -21,7 +21,9 @@ export interface JSXElement {
 }
 
 /** A function component */
-export type ComponentFunction = (props: Record<string, unknown>) => JSXElement | Promise<JSXElement>;
+export type ComponentFunction = (
+  props: Record<string, unknown>,
+) => JSXElement | Promise<JSXElement>;
 
 /** Base props shared by all elements */
 export interface BaseProps extends LayoutStyle {

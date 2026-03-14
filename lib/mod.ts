@@ -8,5 +8,11 @@ export { Icon } from "./components/icon.tsx";
 export { LineChart } from "./components/line-chart.tsx";
 export { IS_MOCK } from "./env.ts";
 export { getCachePath, createCache, type CacheOptions } from "./cache.ts";
-export { request, setRequest, type RequestFn, fetchJson, type FetchJsonOptions } from "./request.ts";
+export {
+  request,
+  setRequest,
+  type RequestFn,
+  fetchJson,
+  type FetchJsonOptions,
+} from "./request.ts";
 export { createState } from "./state.ts";

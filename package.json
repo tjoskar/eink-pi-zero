@@ -1,8 +1,13 @@
 {
   "name": "eink-pi-zero",
   "version": "1.0.0",
-  "type": "module",
   "description": "E-ink display examples using JSX and TypeScript on Raspberry Pi Zero 2.",
+  "type": "module",
+  "imports": {
+    "#lib": "./lib/mod.ts",
+    "#lib/*": "./lib/*.js",
+    "#jsx/*": "./jsx/lib/*.js"
+  },
   "scripts": {
     "dev": "MOCK=1 tsx --env-file=.env",
     "dev:watch": "MOCK=1 tsx --env-file=.env --watch",
@@ -11,14 +16,10 @@
     "start": "node --enable-source-maps dist/hello-world/main.js",
     "deploy": "./scripts/deploy.sh",
     "typecheck": "tsc --noEmit",
+    "fmt": "oxfmt",
     "test": "vitest run --project unit --passWithNoTests",
     "test:snapshot": "docker build -t eink-test -f Dockerfile.test . && docker run --rm eink-test",
     "test:snapshot:update": "docker build -t eink-test -f Dockerfile.test . && docker run --rm -e UPDATE_SNAPSHOTS=1 -v ./src:/app/src eink-test"
-  },
-  "imports": {
-    "#lib": "./lib/mod.ts",
-    "#lib/*": "./lib/*.js",
-    "#jsx/*": "./jsx/lib/*.js"
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.89",
@@ -29,6 +30,7 @@
     "@types/node": "^22.0.0",
     "@types/pngjs": "6.0.5",
     "esbuild": "^0.24.0",
+    "oxfmt": "^0.40.0",
     "pixelmatch": "7.1.0",
     "pngjs": "7.0.0",
     "tsx": "^4.21.0",

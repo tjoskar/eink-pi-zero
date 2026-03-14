@@ -28,25 +28,12 @@ export interface DeviceState {
 }
 
 function DeviceIcon({ device }: { device: DeviceState }) {
-  return (
-    <Icon
-      name={device.icon}
-      size={36}
-      color={device.on ? "black" : "lightGray"}
-    />
-  );
+  return <Icon name={device.icon} size={36} color={device.on ? "black" : "lightGray"} />;
 }
 
 function App({ devices }: { devices: DeviceState[] }) {
   return (
-    <view
-      width={800}
-      height={480}
-      padding={16}
-      direction="column"
-      gap={8}
-      background="white"
-    >
+    <view width={800} height={480} padding={16} direction="column" gap={8} background="white">
       {devices.map((device) => (
         <DeviceIcon device={device} />
       ))}

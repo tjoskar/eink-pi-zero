@@ -36,9 +36,7 @@ export function createCache<T>(opts: CacheOptions<T>) {
     read(allowStale = false): T | null {
       try {
         if (!existsSync(path)) return null;
-        const envelope: CacheEnvelope<T> = JSON.parse(
-          readFileSync(path, "utf-8"),
-        );
+        const envelope: CacheEnvelope<T> = JSON.parse(readFileSync(path, "utf-8"));
         if (!envelope.data) return null;
         if (allowStale || isFresh(envelope)) return envelope.data;
         return null;

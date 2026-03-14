@@ -9,14 +9,14 @@ This project renders a JSX-based UI to a **Waveshare 7.5" V2 e-ink display** (80
 
 ### Key Technologies
 
-| Component | Technology | Reason |
-|-----------|------------|--------|
-| UI Logic | TypeScript + JSX | Type safety, declarative UI |
-| Canvas | @napi-rs/canvas | Prebuilt binaries, no native compilation |
-| Display Rendering | Python (gpiozero + spidev) | Reliable GPIO/SPI on 64-bit OS |
-| Button/LED | gpiomon/gpioset CLI | Works with libgpiod v2.x |
-| Events | MQTT | External integration, error reporting |
-| Bundler | esbuild | Fast, simple, ESM output |
+| Component         | Technology                 | Reason                                   |
+| ----------------- | -------------------------- | ---------------------------------------- |
+| UI Logic          | TypeScript + JSX           | Type safety, declarative UI              |
+| Canvas            | @napi-rs/canvas            | Prebuilt binaries, no native compilation |
+| Display Rendering | Python (gpiozero + spidev) | Reliable GPIO/SPI on 64-bit OS           |
+| Button/LED        | gpiomon/gpioset CLI        | Works with libgpiod v2.x                 |
+| Events            | MQTT                       | External integration, error reporting    |
+| Bundler           | esbuild                    | Fast, simple, ESM output                 |
 
 ---
 
@@ -47,6 +47,7 @@ We initially attempted a pure TypeScript/Node.js solution for both UI generation
 #### Why It's Fundamentally Broken
 
 The Waveshare e-ink driver requires:
+
 ```
 1. Set DC pin LOW (command mode)
 2. Send command byte via SPI
@@ -136,15 +137,15 @@ eink-pi-zero/
 
 ### Button and LED (configurable in `lib/gpio.ts`)
 
-| Function | GPIO Pin | Notes |
-|----------|----------|-------|
+| Function | GPIO Pin | Notes                              |
+| -------- | -------- | ---------------------------------- |
 | Button   | 21       | Active low, use gpiomon for events |
-| LED      | 22       | Active high |
+| LED      | 22       | Active high                        |
 
 ### E-Ink Display (fixed in `python/epdconfig.py`)
 
 | Function | GPIO Pin |
-|----------|----------|
+| -------- | -------- |
 | RST      | 17       |
 | DC       | 25       |
 | CS       | 8        |
@@ -162,6 +163,7 @@ pnpm dev  # Automatically sets MOCK=1
 ```
 
 In mock mode:
+
 - Press `'b'` key to simulate button press
 - Images saved to `/tmp/eink-panel/latest.png`
 - No GPIO/SPI calls made
@@ -196,6 +198,7 @@ Using apt ensures compatibility with the system's libgpiod version.
 ## Error Handling
 
 Errors are:
+
 1. Logged to console
 2. Written to `~/control-panel/logs/eink-panel.log`
 3. Published to MQTT topic `control-panel/error` (if connected)
@@ -206,13 +209,13 @@ The error handler is set up in `main.ts` via `setupGlobalErrorHandler()`.
 
 ## Key Commands
 
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Run in mock mode (macOS dev) |
-| `pnpm build` | Bundle with esbuild |
-| `pnpm start` | Run built bundle |
-| `pnpm typecheck` | TypeScript type checking |
-| `pnpm deploy user@pi.local` | Deploy to Pi via rsync |
+| Command                     | Description                  |
+| --------------------------- | ---------------------------- |
+| `pnpm dev`                  | Run in mock mode (macOS dev) |
+| `pnpm build`                | Bundle with esbuild          |
+| `pnpm start`                | Run built bundle             |
+| `pnpm typecheck`            | TypeScript type checking     |
+| `pnpm deploy user@pi.local` | Deploy to Pi via rsync       |
 
 ---
 
@@ -255,6 +258,7 @@ This project evolved through several iterations:
 4. **Hybrid TypeScript + Python** - current working solution
 
 The hybrid approach was chosen because:
+
 - TypeScript excels at logic, UI, and async operations
 - Python has reliable, well-tested GPIO libraries
 - The display only needs to be updated every few seconds/minutes
@@ -264,7 +268,6 @@ The hybrid approach was chosen because:
 
 Remember that all files should be in snake_case, inclusive component files.
 
-
 ---
 
-*Last updated: January 2026*
+_Last updated: January 2026_

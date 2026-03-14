@@ -132,8 +132,7 @@ export async function getWeatherDisplayData(): Promise<WeatherDisplayData | null
 
   const sunrise = new Date(((current as any).sunrise ?? 0) * 1000);
   const sunset = new Date(((current as any).sunset ?? 0) * 1000);
-  const fmt = (d: Date) =>
-    d.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+  const fmt = (d: Date) => d.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
 
   const rainTotal = getRainTotal(data as Record<string, any>);
   const uvInfo = getUvInfo(data as Record<string, any>);

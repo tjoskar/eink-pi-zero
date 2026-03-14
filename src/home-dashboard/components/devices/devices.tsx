@@ -17,10 +17,22 @@ export interface DeviceState {
 }
 
 const initialDevices = new Map<string, DeviceState>([
-  [`${config.mqttTopicPrefix}/statechange/washing_machine`, { label: "Washing Machine", icon: "local_laundry_service", on: false }],
-  [`${config.mqttTopicPrefix}/statechange/dryer`, { label: "Dryer", icon: "dry_cleaning", on: false }],
-  [`${config.mqttTopicPrefix}/statechange/engine_heater`, { label: "Engine Heater", icon: "local_fire_department", on: false }],
-  [`${config.mqttTopicPrefix}/statechange/bike_charger`, { label: "Bike Charger", icon: "electric_bike", on: false }],
+  [
+    `${config.mqttTopicPrefix}/statechange/washing_machine`,
+    { label: "Washing Machine", icon: "local_laundry_service", on: false },
+  ],
+  [
+    `${config.mqttTopicPrefix}/statechange/dryer`,
+    { label: "Dryer", icon: "dry_cleaning", on: false },
+  ],
+  [
+    `${config.mqttTopicPrefix}/statechange/engine_heater`,
+    { label: "Engine Heater", icon: "local_fire_department", on: false },
+  ],
+  [
+    `${config.mqttTopicPrefix}/statechange/bike_charger`,
+    { label: "Bike Charger", icon: "electric_bike", on: false },
+  ],
 ]);
 
 export const devicesState = createState(initialDevices);
@@ -37,11 +49,5 @@ export function DeviceColumn() {
 }
 
 function DeviceIcon({ device }: { device: DeviceState }) {
-  return (
-    <Icon
-      name={device.icon}
-      size={36}
-      color={device.on ? "black" : "lightGray"}
-    />
-  );
+  return <Icon name={device.icon} size={36} color={device.on ? "black" : "lightGray"} />;
 }

@@ -45,11 +45,7 @@ export function jsx(
 
   // Flatten children - if there's only one child, unwrap it
   const flatChildren =
-    children.length === 1
-      ? children[0]
-      : children.length > 0
-        ? children
-        : undefined;
+    children.length === 1 ? children[0] : children.length > 0 ? children : undefined;
 
   return {
     type,

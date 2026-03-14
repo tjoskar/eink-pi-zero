@@ -110,13 +110,7 @@ export class Canvas {
    * Images are cached after first load for performance.
    * @throws Error if the image file cannot be loaded
    */
-  drawImage(
-    imagePath: string,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-  ): void {
+  drawImage(imagePath: string, x: number, y: number, width: number, height: number): void {
     const resolvedPath = path.resolve(imagePath);
 
     // Check cache first
@@ -267,13 +261,7 @@ export class Canvas {
    * @param startAngle - Starting angle in radians
    * @param endAngle - Ending angle in radians
    */
-  arc(
-    x: number,
-    y: number,
-    radius: number,
-    startAngle: number,
-    endAngle: number,
-  ): void {
+  arc(x: number, y: number, radius: number, startAngle: number, endAngle: number): void {
     this.ctx.arc(x, y, radius, startAngle, endAngle);
   }
 }

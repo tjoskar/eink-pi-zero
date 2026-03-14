@@ -22,12 +22,7 @@ function ConsumptionBar({
   return (
     <view direction="column" justify="end" height={80}>
       {/* Outlined rectangle: black outer, white inner */}
-      <view
-        width={barWidth + 2}
-        height={barHeight + 2}
-        background="black"
-        padding={1}
-      >
+      <view width={barWidth + 2} height={barHeight + 2} background="black" padding={1}>
         <view width={barWidth} height={barHeight} background="white" />
       </view>
     </view>
@@ -60,11 +55,7 @@ function ConsumptionChart({ data }: { data: ElectricityData }) {
         </view>
         <view direction="row" align="end" gap={4} height={80}>
           {consumption.map((value) => (
-            <ConsumptionBar
-              value={value}
-              maxValue={maxValue}
-              barWidth={barWidth}
-            />
+            <ConsumptionBar value={value} maxValue={maxValue} barWidth={barWidth} />
           ))}
         </view>
       </view>

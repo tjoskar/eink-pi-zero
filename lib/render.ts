@@ -32,16 +32,14 @@ async function flattenChildren(children: JSXChildren | undefined): Promise<JSXEl
 
   const arr = Array.isArray(children) ? children : [children];
 
-  const filtered = arr
-    .flat(Infinity)
-    .filter((child): child is JSXElement => {
-      // Filter out null/undefined
-      if (child == null) return false;
-      // Keep objects (elements)
-      if (typeof child === "object") return true;
-      // Primitives (string/number) are handled separately
-      return false;
-    });
+  const filtered = arr.flat(Infinity).filter((child): child is JSXElement => {
+    // Filter out null/undefined
+    if (child == null) return false;
+    // Keep objects (elements)
+    if (typeof child === "object") return true;
+    // Primitives (string/number) are handled separately
+    return false;
+  });
 
   return Promise.all(filtered.map(resolveElement));
 }
@@ -129,11 +127,7 @@ async function buildLayoutTree(element: JSXElement): Promise<LayoutNode> {
  * @param box - The bounding box for the chart
  * @param canvas - The canvas to draw to
  */
-function drawLineChart(
-  props: LineChartProps,
-  box: LayoutBox,
-  canvas: Canvas,
-): void {
+function drawLineChart(props: LineChartProps, box: LayoutBox, canvas: Canvas): void {
   const {
     data,
     markedIndex,
@@ -168,9 +162,7 @@ function drawLineChart(
 
   // Helper to convert value to Y coordinate (inverted, since Y grows downward)
   const valueToY = (value: number): number => {
-    return (
-      chartY + chartHeight - ((value - minValue) / valueRange) * chartHeight
-    );
+    return chartY + chartHeight - ((value - minValue) / valueRange) * chartHeight;
   };
 
   // Draw Y-axis labels
@@ -242,11 +234,7 @@ function drawLineChart(
   canvas.stroke();
 
   // Draw marked point (larger, filled circle)
-  if (
-    markedIndex !== undefined &&
-    markedIndex >= 0 &&
-    markedIndex < data.length
-  ) {
+  if (markedIndex !== undefined && markedIndex >= 0 && markedIndex < data.length) {
     const x = indexToX(markedIndex);
     const y = valueToY(data[markedIndex]);
 
@@ -315,11 +303,7 @@ async function drawElement(
     case "text": {
       // Set text styles using theme
       const textProps = props as TextProps;
-      const fontString = buildFontString(
-        textProps.size,
-        textProps.font,
-        textProps.weight,
-      );
+      const fontString = buildFontString(textProps.size, textProps.font, textProps.weight);
       canvas.setFont(fontString);
       canvas.setFillColor(resolveColor(textProps.color ?? "black"));
 

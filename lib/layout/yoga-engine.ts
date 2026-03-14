@@ -25,13 +25,7 @@ import Yoga, {
   type Node as YogaNode,
 } from "yoga-layout";
 
-import type {
-  LayoutEngine,
-  LayoutNode,
-  LayoutBox,
-  LayoutResult,
-  LayoutStyle,
-} from "./types.ts";
+import type { LayoutEngine, LayoutNode, LayoutBox, LayoutResult, LayoutStyle } from "./types.ts";
 
 /**
  * Map our align values to Yoga's Align enum.
@@ -222,11 +216,7 @@ export class YogaLayoutEngine implements LayoutEngine {
   /**
    * Extract layout results from yoga nodes into our format.
    */
-  private extractResults(
-    yogaNode: YogaNode,
-    offsetX: number,
-    offsetY: number,
-  ): LayoutResult {
+  private extractResults(yogaNode: YogaNode, offsetX: number, offsetY: number): LayoutResult {
     const box: LayoutBox = {
       x: offsetX + yogaNode.getComputedLeft(),
       y: offsetY + yogaNode.getComputedTop(),

@@ -19,9 +19,7 @@
 import mqtt from "mqtt";
 import { renderApp, type DeviceState } from "./app.tsx";
 import { DEVICES_CONFIG } from "./devices.ts";
-import {
-  IS_MOCK, renderToDisplay, initHardware,
-} from "#lib";
+import { IS_MOCK, renderToDisplay, initHardware } from "#lib";
 import { once } from "node:events";
 
 const MQTT_HOST = process.env.MQTT_HOST ?? "localhost";
@@ -54,10 +52,7 @@ async function updateDisplay(): Promise<void> {
     await renderToDisplay(imageBuffer);
     console.log("Display updated");
   } catch (error) {
-    console.error(
-      "Failed to update display",
-      error instanceof Error ? error : undefined,
-    );
+    console.error("Failed to update display", error instanceof Error ? error : undefined);
   } finally {
     isUpdating = false;
   }
@@ -142,11 +137,7 @@ async function main(): Promise<void> {
   // Connect MQTT
   connectMqtt();
 
-  await Promise.race([
-    once(process, "SIGINT"),
-    once(process, "SIGTERM"),
-    once(process, "SIGHUP"),
-  ]);
+  await Promise.race([once(process, "SIGINT"), once(process, "SIGTERM"), once(process, "SIGHUP")]);
 }
 
 main().catch((error) => {

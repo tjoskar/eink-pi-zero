@@ -18,11 +18,13 @@ The code is organized into different folders demonstrating various features and 
 To install the necessary dependencies:
 
 **For local development (on your computer):**
+
 ```bash
 pip install -r requirements_local.txt
 ```
 
 **For Raspberry Pi:**
+
 ```bash
 pip install -r requirements_pi.txt
 ```

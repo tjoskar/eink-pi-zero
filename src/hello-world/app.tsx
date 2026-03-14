@@ -2,14 +2,7 @@ import { jsx } from "#lib";
 
 export function App() {
   return (
-    <view
-      width={800}
-      height={480}
-      padding={40}
-      direction="column"
-      gap={20}
-      background="white"
-    >
+    <view width={800} height={480} padding={40} direction="column" gap={20} background="white">
       <view direction="column" gap={8}>
         <text size={48} weight="bold" color="black">
           Hej Emma!

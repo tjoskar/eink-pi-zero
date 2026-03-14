@@ -6,13 +6,7 @@
  * - Button handling (real GPIO or mock keyboard)
  */
 import { renderApp } from "./app.tsx";
-import {
-  initHardware,
-  onButtonPress,
-  setLed,
-  renderToDisplay,
-  IS_MOCK
-} from "#lib";
+import { initHardware, onButtonPress, setLed, renderToDisplay, IS_MOCK } from "#lib";
 import { once } from "node:events";
 
 /** GPIO pin for the button */
@@ -53,10 +47,7 @@ async function updateDisplay(): Promise<void> {
     await renderToDisplay(imageBuffer);
     console.log("Display updated successfully");
   } catch (error) {
-    console.log(
-      "Failed to update display",
-      error instanceof Error ? error : undefined,
-    );
+    console.log("Failed to update display", error instanceof Error ? error : undefined);
   } finally {
     isUpdating = false;
   }
@@ -97,11 +88,7 @@ async function main(): Promise<void> {
     console.log();
   }
 
-  await Promise.race([
-    once(process, "SIGINT"),
-    once(process, "SIGTERM"),
-    once(process, "SIGHUP"),
-  ]);
+  await Promise.race([once(process, "SIGINT"), once(process, "SIGTERM"), once(process, "SIGHUP")]);
 }
 
 // Start the application
