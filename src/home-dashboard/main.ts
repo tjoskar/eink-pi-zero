@@ -109,6 +109,11 @@ async function main(): Promise<void> {
   });
 
   using _refresh = setInterval(() => {
+    const hour = new Date().getHours();
+    if (hour < 5) {
+      console.log("Skipping refresh — nighttime (00:00-05:00)");
+      return;
+    }
     console.log("Periodic refresh triggered");
     updateDisplay().catch((err) =>
       console.error("Periodic refresh error", err instanceof Error ? err : undefined),

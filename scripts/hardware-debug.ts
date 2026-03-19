@@ -15,12 +15,7 @@
  */
 
 import * as readline from "node:readline";
-import {
-  initHardware,
-  onButtonPress,
-  setLed,
-  renderToDisplay,
-} from "../lib/hardware.ts";
+import { initHardware, onButtonPress, setLed, renderToDisplay } from "../lib/hardware.ts";
 import { readFile } from "node:fs/promises";
 
 const rl = readline.createInterface({

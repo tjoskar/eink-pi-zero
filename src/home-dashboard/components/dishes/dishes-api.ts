@@ -1,7 +1,11 @@
 import { fetchJson, createCache } from "#lib";
 import { config } from "../../config.ts";
 
-const cache = createCache<string[]>({ file: "dishes_cache.json", ttlSeconds: 1800, label: "Dishes" });
+const cache = createCache<string[]>({
+  file: "dishes_cache.json",
+  ttlSeconds: 1800,
+  label: "Dishes",
+});
 
 async function fetchRemoteDishes(): Promise<string[] | null> {
   const url = config.dishesApiUrl;
