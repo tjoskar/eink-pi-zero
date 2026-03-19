@@ -13,9 +13,9 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "paths": {
-      "#lib": ["./lib/mod.ts"],
-    },
+      "#lib": ["./lib/mod.ts"]
+    }
   },
   "include": ["lib/**/*", "src/**/*"],
-  "exclude": ["node_modules"],
+  "exclude": ["node_modules"]
 }

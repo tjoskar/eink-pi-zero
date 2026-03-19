@@ -126,7 +126,7 @@ export class Canvas {
         // Load image synchronously by reading file buffer
         const buffer = fs.readFileSync(resolvedPath);
         const img = new Image();
-        img.src = buffer;
+        img.src = new Uint8Array(buffer);
         image = img;
         this.imageCache.set(resolvedPath, image);
       } catch (error) {

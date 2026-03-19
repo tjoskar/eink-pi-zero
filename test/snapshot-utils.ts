@@ -40,7 +40,7 @@ export function assertSnapshot(actualPng: Buffer, opts: SnapshotOptions): void {
 
   // Update mode or first run — save as reference
   if (process.env.UPDATE_SNAPSHOTS || !existsSync(refPath)) {
-    writeFileSync(refPath, actualPng);
+    writeFileSync(refPath, new Uint8Array(actualPng));
     return;
   }
 
@@ -50,13 +50,20 @@ export function assertSnapshot(actualPng: Buffer, opts: SnapshotOptions): void {
   const { width, height } = actual;
   const diff = new PNG({ width, height });
 
-  const numDiffPixels = pixelmatch(reference.data, actual.data, diff.data, width, height, {
-    threshold,
-  });
+  const numDiffPixels = pixelmatch(
+    new Uint8Array(reference.data),
+    new Uint8Array(actual.data),
+    new Uint8Array(diff.data),
+    width,
+    height,
+    {
+      threshold,
+    },
+  );
 
   if (numDiffPixels > maxDiffPixels) {
-    writeFileSync(actualPath, actualPng);
-    writeFileSync(diffPath, PNG.sync.write(diff));
+    writeFileSync(actualPath, new Uint8Array(actualPng));
+    writeFileSync(diffPath, new Uint8Array(PNG.sync.write(diff)));
     throw new Error(
       `Image mismatch: ${numDiffPixels} pixels differ (max ${maxDiffPixels}).\n` +
         `  Reference: ${refPath}\n` +

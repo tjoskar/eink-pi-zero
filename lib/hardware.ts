@@ -371,7 +371,7 @@ export async function renderToDisplay(
 
   if (IS_MOCK) {
     const imagePath = "preview.png";
-    await writeFile(imagePath, imageBuffer);
+    await writeFile(imagePath, new Uint8Array(imageBuffer));
     console.log(`[hardware] Mock render #${renderCount} (${mode}): ${imagePath}`);
     renderCount++;
     return;
@@ -379,7 +379,7 @@ export async function renderToDisplay(
 
   // Write image to temp file for daemon
   const imagePath = join(tmpdir(), "eink-latest.png");
-  await writeFile(imagePath, imageBuffer);
+  await writeFile(imagePath, new Uint8Array(imageBuffer));
 
   // Send render command to daemon
   await sendCommandWithResponse(
