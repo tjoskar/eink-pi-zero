@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
+  "rules": {
+    "no-unused-vars": [
+      "error",
+      {
+        "varsIgnorePattern": "^(jsx|Fragment|_)",
+        "argsIgnorePattern": "^_"
+      }
+    ],
+    "no-await-in-loop": "off",
+    "typescript/no-unsafe-type-assertion": "off",
+    "typescript/restrict-template-expressions": "off",
+    "no-map-spread": "off"
+  },
+  "options": { "typeAware": true },
+  "ignorePatterns": ["dist/", "node_modules/"]
+}

@@ -121,6 +121,8 @@ function getUvInfo(data: Record<string, any>): string {
   return `${Math.round(currentUv)} (${Math.round(maxUv)}, ${minH} - ${maxH})`;
 }
 
+const fmtTime = (d: Date) => d.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+
 export async function getWeatherDisplayData(): Promise<WeatherDisplayData | null> {
   const data = await fetchWeatherData();
   if (!data) return null;
@@ -132,7 +134,6 @@ export async function getWeatherDisplayData(): Promise<WeatherDisplayData | null
 
   const sunrise = new Date(((current as any).sunrise ?? 0) * 1000);
   const sunset = new Date(((current as any).sunset ?? 0) * 1000);
-  const fmt = (d: Date) => d.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
 
   const rainTotal = getRainTotal(data as Record<string, any>);
   const uvInfo = getUvInfo(data as Record<string, any>);
@@ -155,7 +156,7 @@ export async function getWeatherDisplayData(): Promise<WeatherDisplayData | null
       temp: `${Math.round(temp)}°`,
       icon: getWeatherIconName(iconCode),
       windSpeed: `${Math.round(windSpeed)} m/s`,
-      sunTimes: `${fmt(sunrise)} / ${fmt(sunset)}`,
+      sunTimes: `${fmtTime(sunrise)} / ${fmtTime(sunset)}`,
       rain: `${rainTotal.toFixed(1)} mm`,
       uvInfo,
     },

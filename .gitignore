@@ -1,6 +1,5 @@
-config/settings.py
-v1/config/settings.py
 .env
+logs/
 venv
 __pycache__/
 *.pyc
@@ -12,3 +11,4 @@ __pycache__/
 *.diff.png
 node_modules/
 dist
+.claude/settings.local.json

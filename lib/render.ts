@@ -1,13 +1,7 @@
 import type { Canvas } from "./canvas/napi-canvas.ts";
 import type { LayoutNode, LayoutResult, LayoutBox } from "./layout/types.ts";
 import { getLayoutEngine } from "./layout/mod.ts";
-import type {
-  JSXElement,
-  JSXChildren,
-  ComponentFunction,
-  LineChartProps,
-  TextProps,
-} from "./runtime/types.ts";
+import type { JSXElement, JSXChildren, LineChartProps, TextProps } from "./runtime/types.ts";
 import { resolveColor, buildFontString } from "./theme.ts";
 
 /**
@@ -19,7 +13,7 @@ import { resolveColor, buildFontString } from "./theme.ts";
 async function resolveElement(element: JSXElement): Promise<JSXElement> {
   if (typeof element.type === "function") {
     // Call the component function to get its element tree
-    const componentFn = element.type as ComponentFunction;
+    const componentFn = element.type;
     const result = await componentFn(element.props as Record<string, unknown>);
     // Recursively resolve in case it returns another component
     return resolveElement(result);
@@ -188,9 +182,7 @@ function drawLineChart(props: LineChartProps, box: LayoutBox, canvas: Canvas): v
 
     for (let i = 0; i < count; i++) {
       // Calculate which data index this label corresponds to
-      const dataIndex = xLabels
-        ? Math.floor((i / (count - 1)) * (data.length - 1))
-        : Math.floor((i / (count - 1)) * (data.length - 1));
+      const dataIndex = Math.floor((i / (count - 1)) * (data.length - 1));
 
       const x = indexToX(dataIndex);
       const label = xLabels ? labelsToShow[i] : String(dataIndex);

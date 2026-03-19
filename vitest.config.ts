@@ -6,7 +6,6 @@ export default defineConfig({
     alias: {
       "#lib": path.resolve(import.meta.dirname, "lib/mod.ts"),
       "#lib/": path.resolve(import.meta.dirname, "lib") + "/",
-      "#jsx/": path.resolve(import.meta.dirname, "jsx/lib") + "/",
     },
   },
   test: {

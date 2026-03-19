@@ -21,10 +21,16 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
+DEPLOY_USER="${SUDO_USER:-$(logname)}"
+USER_HOME=$(eval echo "~$DEPLOY_USER")
+NODE_PATH=$(su - "$DEPLOY_USER" -c "which node" 2>/dev/null || echo "/usr/local/bin/node")
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-USER_HOME="/home/tjoskar"
 
+echo "Deploy user: $DEPLOY_USER"
+echo "User home: $USER_HOME"
+echo "Node path: $NODE_PATH"
 echo "Project directory: $PROJECT_DIR"
 echo
 
@@ -52,29 +58,34 @@ echo "  Dependencies installed"
 # 3. Create log directory
 echo "→ Creating log directory..."
 mkdir -p "$USER_HOME/control-panel/logs"
-chown -R tjoskar:tjoskar "$USER_HOME/control-panel"
+chown -R "$DEPLOY_USER:$DEPLOY_USER" "$USER_HOME/control-panel"
 echo "  Log directory created: $USER_HOME/control-panel/logs"
 
 # 4. Create temp directory
 echo "→ Creating temp directory..."
 mkdir -p /tmp/eink-panel
-chown tjoskar:tjoskar /tmp/eink-panel
+chown "$DEPLOY_USER:$DEPLOY_USER" /tmp/eink-panel
 echo "  Temp directory created: /tmp/eink-panel"
 
-# 5. Install systemd service
+# 5. Install systemd service (substitute placeholders)
 echo "→ Installing systemd service..."
-cp "$PROJECT_DIR/scripts/eink-panel.service" /etc/systemd/system/
+sed -e "s|__USER__|$DEPLOY_USER|g" \
+    -e "s|__HOME__|$USER_HOME|g" \
+    -e "s|__NODE_PATH__|$NODE_PATH|g" \
+    "$PROJECT_DIR/scripts/eink-panel.service" > /etc/systemd/system/eink-panel.service
 systemctl daemon-reload
 echo "  Systemd service installed"
 
-# 6. Install logrotate config
+# 6. Install logrotate config (substitute placeholders)
 echo "→ Installing logrotate config..."
-cp "$PROJECT_DIR/scripts/eink-panel.logrotate" /etc/logrotate.d/eink-panel
+sed -e "s|__USER__|$DEPLOY_USER|g" \
+    -e "s|__HOME__|$USER_HOME|g" \
+    "$PROJECT_DIR/scripts/eink-panel.logrotate" > /etc/logrotate.d/eink-panel
 echo "  Logrotate config installed"
 
 # 7. Add user to gpio and spi groups
 echo "→ Adding user to gpio and spi groups..."
-usermod -aG gpio,spi tjoskar 2>/dev/null || true
+usermod -aG gpio,spi "$DEPLOY_USER" 2>/dev/null || true
 echo "  User added to groups"
 
 echo

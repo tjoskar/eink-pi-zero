@@ -19,7 +19,7 @@
 import mqtt from "mqtt";
 import { renderApp, type DeviceState } from "./app.tsx";
 import { DEVICES_CONFIG } from "./devices.ts";
-import { IS_MOCK, renderToDisplay, initHardware } from "#lib";
+import { renderToDisplay, initHardware } from "#lib";
 import { once } from "node:events";
 
 const MQTT_HOST = process.env.MQTT_HOST ?? "localhost";

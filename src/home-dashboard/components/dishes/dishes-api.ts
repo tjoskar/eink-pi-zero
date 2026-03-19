@@ -4,7 +4,7 @@ import { config } from "../../config.ts";
 const cache = createCache<string[]>({ file: "dishes_cache.json", label: "Dishes" });
 
 async function fetchRemoteDishes(): Promise<string[] | null> {
-  const url = config.dishesApiUrl!;
+  const url = config.dishesApiUrl;
   const data = await fetchJson<unknown>(url, { timeout: 1_000, label: "Dishes" });
   return Array.isArray(data) ? (data as string[]) : null;
 }

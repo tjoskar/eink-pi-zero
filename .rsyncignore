@@ -1,4 +1,9 @@
 .git
+.claude
+dist
+docs
+logs
+node_modules
 __pycache__/
 venv/
 main.png

@@ -100,7 +100,7 @@ async function handleCommand(line: string): Promise<boolean> {
         console.log(`Unknown command: ${cmd}. Type "help" for available commands.`);
     }
   } catch (err) {
-    console.error(`Error: ${err instanceof Error ? err.message : err}`);
+    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   return true;

@@ -61,7 +61,7 @@ export interface Theme<TColor extends string = EinkBWColor> {
  * Pre-configured theme for black & white e-ink displays.
  * Supports 4 grayscale levels commonly available on e-ink screens.
  */
-export const EINK_BW_THEME: Theme<EinkBWColor> = {
+export const EINK_BW_THEME: Theme = {
   defaultFont: "Noto Sans",
   defaultFontSize: 16,
   colors: {

@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    // Use the classic JSX transform with a custom factory
     "jsx": "react",
     "jsxFactory": "jsx",
     "jsxFragmentFactory": "Fragment",
@@ -13,11 +12,10 @@
     "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "baseUrl": ".",
     "paths": {
-      "#lib": ["./lib/mod.ts"]
-    }
+      "#lib": ["./lib/mod.ts"],
+    },
   },
   "include": ["lib/**/*", "src/**/*"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules"],
 }

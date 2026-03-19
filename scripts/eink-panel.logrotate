@@ -1,10 +1,10 @@
-/home/oskar/control-panel/logs/eink-panel.log {
+__HOME__/control-panel/logs/eink-panel.log {
     daily
     rotate 7
     compress
     delaycompress
     missingok
     notifempty
-    create 644 oskar oskar
+    create 644 __USER__ __USER__
     copytruncate
 }

@@ -51,7 +51,7 @@ beforeAll(() => {
   registerFont("./fonts/noto-sans-regular.ttf", "Noto Sans");
   registerIconFont();
 
-  const mockFetch: RequestFn = async (input, init) => {
+  const mockFetch: RequestFn = async (input, _init) => {
     const url =
       typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 

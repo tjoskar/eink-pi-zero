@@ -1,34 +1,111 @@
-# E-ink Dashboard Example Code
+# Eink TSX
 
-This repository contains example code accompanying an e-book on how to build a dashboard using an e-ink display and a Raspberry Pi Zero.
+An TSX e-ink display framework.
 
-## Contents
+Built for Raspberry Pi Zero 2 that renders JSX/TSX components to a Waveshare 7.5" V2 display (800x480). But could easily support other displays.
 
-The code is organized into different folders demonstrating various features and steps in the process:
+## Example
 
-- **hello_world/**: A simple starting point to verify the display works and show text.
-- **fancy_hello_world/**: A slightly more advanced "Hello World" example with more formatting.
-- **button_and_led/**: Examples of interacting with hardware, such as buttons and LEDs.
-- **fetch_example/**: Shows how to fetch data from external APIs (e.g., weather data).
-- **mqtt_example/**: Examples of communication and data transfer via MQTT.
-- **full_example/**: A complete example of a dashboard combining multiple data sources (menu, electricity prices, garbage collection, weather) into a finished application.
+```tsx
+import { jsx } from "#lib";
 
-## Installation
-
-To install the necessary dependencies:
-
-**For local development (on your computer):**
-
-```bash
-pip install -r requirements_local.txt
+export function App() {
+  return (
+    <view width={800} height={480} padding={40} direction="column" gap={20} background="white">
+      <view direction="column" gap={8}>
+        <text size={48} weight="bold" color="black">
+          Hello World!
+        </text>
+      </view>
+    </view>
+  );
+}
 ```
 
-**For Raspberry Pi:**
+## About the examples
+
+The `src/home-dashboard/` example is a personal dashboard — it pulls weather, electricity prices, meal plans, and garbage collection schedules from specific APIs. It's here as a reference for how to build a complete app, but you'll want to create your own.
+
+The simpler examples (`hello-world`, `hello-world-with-button`, `fetch-example-openweather`) are better starting points.
+
+## Prerequisites
+
+- **Node.js** >= 24 (for `--env-file` flag)
+- **pnpm**
+- **Raspberry Pi Zero 2** with 64-bit Raspberry Pi OS (for deployment)
+- **Waveshare 7.5" V2 e-ink display** (800x480)
+
+For local development, you only need Node.js and pnpm.
+
+## Quick start
 
 ```bash
-pip install -r requirements_pi.txt
+pnpm install
+
+# Copy environment config
+cp .env.example .env
+
+# Run hello-world in mock mode
+pnpm dev src/hello-world/main.tsx
 ```
 
-## Configuration
+This renders to `/tmp/eink-panel/latest.png`. Open it to see the output.
 
-See the `config/` folder for settings. You may need to copy `settings_example.py` to `settings.py` and adjust the variables to your environment.
+## Creating your own app
+
+At this point can you just create a new folder under `src/`:
+
+```tsx
+// src/my-app/main.tsx
+import {
+  jsx,
+  Canvas,
+  render,
+  registerFont,
+  setTheme,
+  EINK_BW_THEME,
+  renderToDisplay,
+  initHardware,
+} from "#lib";
+
+function App() {
+  return (
+    <view width={800} height={480} padding={40} background="white">
+      <text size={48} weight="bold">
+        Hello from e-ink!
+      </text>
+    </view>
+  );
+}
+
+setTheme({ ...EINK_BW_THEME, defaultFont: "Noto Sans" });
+registerFont("./fonts/noto-sans-regular.ttf", "Noto Sans");
+
+const canvas = Canvas.create(800, 480);
+await render(<App />, canvas);
+
+using _hardware = await initHardware();
+await renderToDisplay(canvas.toPng());
+```
+
+Run it:
+
+```bash
+pnpm dev src/my-app/main.tsx
+```
+
+## Deploy to Raspberry Pi
+
+```bash
+# Deploy to Pi with rsync
+pnpm deploy pi@raspberrypi.local
+
+# On the Pi (first time only):
+sudo ./scripts/setup-pi.sh
+
+# Start the service:
+sudo systemctl start eink-panel
+sudo systemctl enable eink-panel
+```
+
+The `setup-pi.sh` script installs system dependencies, enables SPI, sets up the systemd service, and configures log rotation. It auto-detects the current user.
