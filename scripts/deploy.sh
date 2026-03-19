@@ -16,7 +16,7 @@ if [ -z "$1" ]; then
 fi
 
 TARGET="$1"
-REMOTE_DIR="~/control-panel"
+REMOTE_DIR="~/eink-panel"
 
 echo "=== Building ==="
 pnpm run build
@@ -40,6 +40,5 @@ echo "=== Done! ==="
 echo ""
 echo "On your Pi, run:"
 echo "  cd $REMOTE_DIR"
-echo "  pnpm install --prod"
-echo "  sudo ./scripts/setup-pi.sh  # First time only"
-echo "  node --env-file=.env --enable-source-maps dist/home-dashboard/main.js"
+echo "  sudo ./scripts/setup-pi.sh  # First time only or if you add any new dependencies"
+echo "  sudo systemctl restart eink-panel"

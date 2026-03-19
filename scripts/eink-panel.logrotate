@@ -1,4 +1,4 @@
-__HOME__/control-panel/logs/eink-panel.log {
+__HOME__/eink-panel/logs/eink-panel.log {
     daily
     rotate 7
     compress

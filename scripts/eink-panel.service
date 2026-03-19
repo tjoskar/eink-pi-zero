@@ -5,7 +5,7 @@ After=network.target
 [Service]
 Type=simple
 User=__USER__
-WorkingDirectory=__HOME__/control-panel
+WorkingDirectory=__HOME__/eink-panel
 ExecStart=__NODE_PATH__ --env-file=.env --enable-source-maps dist/home-dashboard/main.js
 Restart=on-failure
 RestartSec=10
@@ -14,14 +14,14 @@ RestartSec=10
 Environment=NODE_ENV=production
 
 # Logging
-StandardOutput=append:__HOME__/control-panel/logs/eink-panel.log
-StandardError=append:__HOME__/control-panel/logs/eink-panel.log
+StandardOutput=append:__HOME__/eink-panel/logs/eink-panel.log
+StandardError=append:__HOME__/eink-panel/logs/eink-panel.log
 
 # Security hardening
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=__HOME__/control-panel/logs /tmp/eink-panel
+ReadWritePaths=__HOME__/eink-panel/logs /tmp/eink-panel
 
 [Install]
 WantedBy=multi-user.target

@@ -23,14 +23,13 @@ fi
 
 DEPLOY_USER="${SUDO_USER:-$(logname)}"
 USER_HOME=$(eval echo "~$DEPLOY_USER")
-NODE_PATH=$(su - "$DEPLOY_USER" -c "which node" 2>/dev/null || echo "/usr/local/bin/node")
+FNM_DIR="$USER_HOME/.local/share/fnm"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 echo "Deploy user: $DEPLOY_USER"
 echo "User home: $USER_HOME"
-echo "Node path: $NODE_PATH"
 echo "Project directory: $PROJECT_DIR"
 echo
 
@@ -51,23 +50,59 @@ apt install -y \
     python3-spidev \
     python3-gpiozero \
     gpiod \
-    fonts-noto
+    curl
 
 echo "  Dependencies installed"
 
-# 3. Create log directory
-echo "→ Creating log directory..."
-mkdir -p "$USER_HOME/control-panel/logs"
-chown -R "$DEPLOY_USER:$DEPLOY_USER" "$USER_HOME/control-panel"
-echo "  Log directory created: $USER_HOME/control-panel/logs"
+# 3. Install fnm, Node.js and pnpm (as deploy user, skip if already present)
+echo "→ Setting up Node.js environment..."
+if [ ! -d "$FNM_DIR" ]; then
+    echo "  Installing fnm..."
+    su - "$DEPLOY_USER" -c "curl -fsSL https://fnm.vercel.app/install | bash"
+else
+    echo "  fnm already installed"
+fi
 
-# 4. Create temp directory
+FNM_PATH="$FNM_DIR/fnm"
+if [ ! -x "$FNM_DIR/aliases/default/bin/node" ]; then
+    echo "  Installing Node.js..."
+    su - "$DEPLOY_USER" -c "'$FNM_PATH' install 25 && '$FNM_PATH' default 25"
+else
+    echo "  Node.js already installed"
+fi
+
+NODE_PATH="$FNM_DIR/aliases/default/bin/node"
+NPM_PATH="$FNM_DIR/aliases/default/bin/npm"
+FNM_BIN="$FNM_DIR/aliases/default/bin"
+
+if ! su - "$DEPLOY_USER" -c "export PATH='$FNM_BIN:\$PATH' && pnpm --version" &>/dev/null; then
+    echo "  Installing corepack and pnpm..."
+    su - "$DEPLOY_USER" -c "export PATH='$FNM_BIN:\$PATH' && npm install -g corepack && corepack enable pnpm"
+else
+    echo "  pnpm already installed"
+fi
+
+echo "  Node path: $NODE_PATH"
+
+# 4. Install project dependencies
+PNPM_PATH="$FNM_DIR/aliases/default/bin/pnpm"
+echo "→ Installing project dependencies..."
+su - "$DEPLOY_USER" -c "export PATH='$FNM_BIN:\$PATH' && cd '$PROJECT_DIR' && NODE_ENV=production pnpm install --prod --no-optional"
+echo "  Dependencies installed"
+
+# 4. Create log directory
+echo "→ Creating log directory..."
+mkdir -p "$USER_HOME/eink-panel/logs"
+chown -R "$DEPLOY_USER:$DEPLOY_USER" "$USER_HOME/eink-panel"
+echo "  Log directory created: $USER_HOME/eink-panel/logs"
+
+# 5. Create temp directory
 echo "→ Creating temp directory..."
 mkdir -p /tmp/eink-panel
 chown "$DEPLOY_USER:$DEPLOY_USER" /tmp/eink-panel
 echo "  Temp directory created: /tmp/eink-panel"
 
-# 5. Install systemd service (substitute placeholders)
+# 6. Install systemd service (substitute placeholders)
 echo "→ Installing systemd service..."
 sed -e "s|__USER__|$DEPLOY_USER|g" \
     -e "s|__HOME__|$USER_HOME|g" \
@@ -76,14 +111,14 @@ sed -e "s|__USER__|$DEPLOY_USER|g" \
 systemctl daemon-reload
 echo "  Systemd service installed"
 
-# 6. Install logrotate config (substitute placeholders)
+# 7. Install logrotate config (substitute placeholders)
 echo "→ Installing logrotate config..."
 sed -e "s|__USER__|$DEPLOY_USER|g" \
     -e "s|__HOME__|$USER_HOME|g" \
     "$PROJECT_DIR/scripts/eink-panel.logrotate" > /etc/logrotate.d/eink-panel
 echo "  Logrotate config installed"
 
-# 7. Add user to gpio and spi groups
+# 8. Add user to gpio and spi groups
 echo "→ Adding user to gpio and spi groups..."
 usermod -aG gpio,spi "$DEPLOY_USER" 2>/dev/null || true
 echo "  User added to groups"
