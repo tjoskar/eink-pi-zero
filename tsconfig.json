@@ -16,6 +16,6 @@
       "#lib": ["./lib/mod.ts"]
     }
   },
-  "include": ["lib/**/*", "src/**/*"],
+  "include": ["lib/**/*", "src/**/*", "scripts/**/*", "test/**/*"],
   "exclude": ["node_modules"]
 }

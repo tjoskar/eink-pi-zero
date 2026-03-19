@@ -16,11 +16,10 @@
 
 import * as readline from "node:readline";
 import {
-  startHardwareDaemon,
+  initHardware,
   onButtonPress,
   setLed,
   renderToDisplay,
-  cleanup,
 } from "../lib/hardware.ts";
 import { readFile } from "node:fs/promises";
 
@@ -118,7 +117,7 @@ async function main(): Promise<void> {
 
   // Start the daemon
   console.log("Starting hardware daemon...");
-  await startHardwareDaemon();
+  const hardware = await initHardware();
   console.log();
 
   rl.setPrompt("hw> ");
@@ -135,20 +134,19 @@ async function main(): Promise<void> {
 
   rl.on("close", () => {
     console.log("\nCleaning up...");
-    cleanup();
+    hardware.cleanup();
+    process.exit(0);
+  });
+
+  // Handle Ctrl+C
+  process.on("SIGINT", () => {
+    console.log("\nCleaning up...");
+    hardware.cleanup();
     process.exit(0);
   });
 }
 
-// Handle Ctrl+C
-process.on("SIGINT", () => {
-  console.log("\nCleaning up...");
-  cleanup();
-  process.exit(0);
-});
-
 main().catch((err) => {
   console.error("Fatal error:", err);
-  cleanup();
   process.exit(1);
 });
