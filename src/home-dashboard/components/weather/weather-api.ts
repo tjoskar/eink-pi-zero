@@ -39,9 +39,7 @@ export interface WeatherDisplayData {
 
 const cache = createCache<Record<string, unknown>>({
   file: "weather_cache.json",
-  get ttlSeconds() {
-    return config.cacheDuration;
-  },
+  ttlSeconds: 1800,
   label: "Weather",
 });
 
