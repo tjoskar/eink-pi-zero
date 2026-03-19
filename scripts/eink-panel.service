@@ -21,7 +21,7 @@ StandardError=append:__HOME__/eink-panel/logs/eink-panel.log
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=__HOME__/eink-panel/logs /tmp/eink-panel
+ReadWritePaths=__HOME__/eink-panel/logs __HOME__/eink-panel/.cache /tmp
 
 [Install]
 WantedBy=multi-user.target
