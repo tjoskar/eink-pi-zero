@@ -1,10 +1,40 @@
-# Eink TSX
+# E-Ink Dashboard Framework
 
-An TSX e-ink display framework.
+A TSX framework for rendering e-ink dashboards on Raspberry Pi Zero 2 W.
 
-Built for Raspberry Pi Zero 2 that renders JSX/TSX components to a Waveshare 7.5" V2 display (800x480). But could easily support other displays.
+Build declarative UI components with JSX, get type safety and snapshot testing, and render them to a Waveshare 7.5" e-ink display. No headless browser needed, rendering takes milliseconds.
 
-## Example
+<img src="eink-dashboard.jpg" alt="E-ink dashboard in an IKEA frame showing weather, electricity prices, weekly menu, and device status" width="600" />
+
+## Hardware Guide
+
+Want to build your own? There's a step-by-step guide covering hardware selection, soldering (optional), wiring, Raspberry Pi setup, and common pitfalls — [available here](https://karlssonoskar.gumroad.com/l/eink-dashboard) for $5.
+
+## Quick Start
+
+```bash
+pnpm install
+
+# Copy environment config
+cp .env.example .env
+
+# Run hello-world in mock mode
+pnpm dev src/hello-world/main.tsx
+```
+
+This renders an image to a temp directory. Open the path printed in the terminal to see the output.
+
+## Examples
+
+The repo includes several examples to get you started:
+
+- `src/hello-world/` — Minimal example, renders text to the display
+- `src/hello-world-with-button/` — Adds a physical button interaction
+- `src/fetch-example-openweather/` — Fetches weather data and renders it
+- `src/mqtt-device-status/` — Listens for MQTT events and updates the display
+- `src/home-dashboard/` — A complete personal dashboard with weather, electricity prices, meal plans, garbage collection, and device status. See it as a reference for how to build a complete app, but you'll want to create your own to match your setup.
+
+## Hello World
 
 ```tsx
 import { jsx } from "#lib";
@@ -22,60 +52,15 @@ export function App() {
 }
 ```
 
-## Why tsx and node?
+## Creating Your Own App
 
-That is a really good question. First off, why not python? Python has really good tools for this type of project and the thing is that I started off with python and you can see all my code that I used under the v1-python branch. It was stable and worked fine. However, I had a few issues with it (all on my side and my preferences):
-
-I could never get the code readable. The code I ended up with was `draw.text((100, 100), "Hello World", font=font, fill=0)` compare with
-
-```tsx
-<view paddingTop={100} paddingLeft={100}>
-  <text>Hello World</text>
-</view>
-```
-
-More code for sure but now could I start to compose components and build complete views without needing to think about absolute coordinates and I could write the code more declarative.
-
-Other nice gains are that I can get the code fully typed and easy testable with snapshot tests and better support from the ide.
-
-However, there is a big downside, namely that python has much better support for SPI and GPIO than what exist in the node community. I tried to create my own but never succeeded.
-
-If your question is more towards why not Bun or Deno, they support tsx out of the box and should be great tools. They do however fail on that they don't support ARM Cortex-A53 (pi zero).
-
-See more here if you are interested: [architecture.md](./docs/architecture.md)
-
-## About the examples
-
-The `src/home-dashboard/` example is a personal dashboard — it pulls weather, electricity prices, meal plans, and garbage collection schedules from specific APIs. See it as a referecne for how to build a complete app, but you'll want to create your own to match you setup.
-
-The simpler examples (`hello-world`, `hello-world-with-button`, `fetch-example-openweather`) are better starting points.
-
-## Prerequisites
-
-- **Node.js** >= 24
-- **pnpm**
-- **Raspberry Pi Zero 2** with 64-bit Raspberry Pi OS
-- **Waveshare 7.5" V2 e-ink display** (800x480) Or some other Waveshare display.
-
-For local development, you only need Node.js and pnpm.
-
-## Quick start
+Install from GitHub:
 
 ```bash
-pnpm install
-
-# Copy environment config
-cp .env.example .env
-
-# Run hello-world in mock mode
-pnpm dev src/hello-world/main.tsx
+pnpm add tjoskar/eink-pi-zero#main
 ```
 
-This renders to an image to a temp dir. Open the path that is printed out in the terminal to see the output.
-
-## Creating your own app
-
-I can publish this as an npm package if there is an intrest for it but right now can you just install it from github `pnpm add tjoskar/eink-pi-zero#main` or clone the repo and create a new folder under `src/`:
+Or clone the repo and create a new folder under `src/`:
 
 ```tsx
 // src/my-app/main.tsx
@@ -130,4 +115,29 @@ sudo systemctl start eink-panel
 sudo systemctl enable eink-panel
 ```
 
-The `setup-pi.sh` script installs system dependencies, enables SPI, sets up the systemd service, and configures log rotation. It auto-detects the current user.
+The `setup-pi.sh` script installs system dependencies, enables SPI, sets up the systemd service, and configures log rotation.
+
+## Prerequisites
+
+- **Node.js** >= 24
+- **pnpm**
+- **Raspberry Pi Zero 2 W** with 64-bit Raspberry Pi OS
+- **Waveshare 7.5" V2 e-ink display** (800x480), or another Waveshare display with minor adjustments
+
+For local development, you only need Node.js and pnpm.
+
+## Why TSX?
+
+I started this project in Python (the original code is on the `v1-python` branch). Python works well for this kind of project, but I found the imperative drawing style hard to maintain:
+
+```python
+draw.text((100, 100), "Hello World", font=font, fill=0)
+```
+
+With TSX, components are declarative and composable. You don't think about absolute coordinates, you get full type safety, and you can write snapshot tests to catch visual regressions.
+
+The tradeoff: Python has much better GPIO and SPI support on the Pi. So the architecture is a hybrid — TypeScript handles all UI rendering, while a small Python daemon handles hardware (GPIO, buttons, LED, display) via JSON IPC. See [docs/architecture.md](./docs/architecture.md) for the full design rationale.
+
+## License
+
+MIT
