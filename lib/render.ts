@@ -325,7 +325,7 @@ async function drawElement(
     case "image": {
       const imageProps = props as { src?: string };
       if (imageProps.src) {
-        canvas.drawImage(imageProps.src, box.x, box.y, box.width, box.height);
+        await canvas.drawImage(imageProps.src, box.x, box.y, box.width, box.height);
       }
       break;
     }

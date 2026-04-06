@@ -29,6 +29,7 @@ This renders an image to a temp directory. Open the path printed in the terminal
 The repo includes several examples to get you started:
 
 - `src/hello-world/` — Minimal example, renders text to the display
+- `src/fancy-hello-world/` — A more fancy hello world with an image
 - `src/hello-world-with-button/` — Adds a physical button interaction
 - `src/fetch-example-openweather/` — Fetches weather data and renders it
 - `src/mqtt-device-status/` — Listens for MQTT events and updates the display

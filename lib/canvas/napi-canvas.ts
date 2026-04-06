@@ -3,7 +3,7 @@
  */
 import {
   createCanvas,
-  Image,
+  loadImage,
   type Canvas as NapiRsCanvas,
   type SKRSContext2D,
 } from "@napi-rs/canvas";
@@ -34,7 +34,7 @@ export class Canvas {
   private ctx: SKRSContext2D;
 
   /** Cache for loaded images to avoid reloading */
-  private imageCache: Map<string, Image> = new Map();
+  private imageCache: Map<string, Awaited<ReturnType<typeof loadImage>>> = new Map();
 
   constructor(width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT) {
     this.width = width;
@@ -110,7 +110,13 @@ export class Canvas {
    * Images are cached after first load for performance.
    * @throws Error if the image file cannot be loaded
    */
-  drawImage(imagePath: string, x: number, y: number, width: number, height: number): void {
+  async drawImage(
+    imagePath: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): Promise<void> {
     const resolvedPath = path.resolve(imagePath);
 
     // Check cache first
@@ -123,11 +129,7 @@ export class Canvas {
       }
 
       try {
-        // Load image synchronously by reading file buffer
-        const buffer = fs.readFileSync(resolvedPath);
-        const img = new Image();
-        img.src = new Uint8Array(buffer);
-        image = img;
+        image = await loadImage(resolvedPath);
         this.imageCache.set(resolvedPath, image);
       } catch (error) {
         console.warn(`[Canvas] Failed to load image: ${resolvedPath}`, error);
