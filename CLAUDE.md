@@ -1,1 +1,0 @@
-E-ink display framework for Raspberry Pi Zero 2 — renders JSX/TSX components to a Waveshare 7.5" V2 display (800x480). TypeScript handles UI logic and rendering; a Python daemon handles hardware (GPIO, SPI, display driver) via JSON IPC over stdin/stdout.
