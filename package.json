@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "E-ink display examples using JSX and TypeScript on Raspberry Pi Zero 2.",
   "type": "module",
-  "packageManager": "pnpm@10.28.1",
   "main": "./lib/mod.ts",
   "imports": {
     "#lib": "./lib/mod.ts",
@@ -26,14 +25,14 @@
     "test:snapshot:update": "docker build -t eink-test -f Dockerfile.test . && docker run --rm -e UPDATE_SNAPSHOTS=1 -v ./src:/app/src eink-test"
   },
   "dependencies": {
-    "@napi-rs/canvas": "^0.1.89",
-    "mqtt": "^5.0.0",
-    "yoga-layout": "^3.2.1"
+    "@napi-rs/canvas": "0.1.89",
+    "mqtt": "5.14.1",
+    "yoga-layout": "3.2.1"
   },
   "devDependencies": {
     "@types/node": "22.0.0",
     "@types/pngjs": "6.0.5",
-    "@typescript/native-preview": "*",
+    "@typescript/native-preview": "7.0.0-dev.20260406.1",
     "esbuild": "0.27.4",
     "oxfmt": "0.41.0",
     "oxlint": "1.56.0",
@@ -45,5 +44,6 @@
   },
   "engines": {
     "node": ">=24"
-  }
+  },
+  "packageManager": "pnpm@10.28.1"
 }
