@@ -8,7 +8,7 @@ Build declarative UI components with JSX, get type safety and snapshot testing, 
 
 ## Hardware Guide
 
-Want to build your own? There's a step-by-step guide covering hardware selection, soldering (optional), wiring, Raspberry Pi setup, and common pitfalls — [available here](https://karlssonoskar.gumroad.com/l/eink-dashboard) for $5.
+Want to build your own? You can find a pdf version of my book here: https://github.com/tjoskar/eink-pi-zero/tree/main/ebook If the book or code is useful to you, feel free to send a small donation my way, thanks: https://buymeacoffee.com/tjoskar
 
 ## Quick Start
 
