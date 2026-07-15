@@ -1,5 +1,4 @@
 export interface GarbageEvent {
-  type: "household" | "garden";
   dateStr: string;
   daysUntil: string;
   label: string;
@@ -10,27 +9,29 @@ export interface GarbageData {
   reminder: string | null;
 }
 
-export interface CollectionEntry {
-  type: "household" | "garden";
-  date: string; // YYYY-MM-DD
+/**
+ * A recurring collection: it happens on `anchor` and then repeats every
+ * `intervalDays`. `anchor` just needs to be one known collection date — it can
+ * be in the past; occurrences are projected forward from it.
+ */
+export interface RecurringCollection {
+  label: string;
+  /** Word used in the "Dags att ställa ut X!" reminder. */
+  reminderText: string;
+  anchor: string; // YYYY-MM-DD, a known collection date
+  intervalDays: number;
 }
 
-const GARBAGE_COLLECTION_DATES: CollectionEntry[] = [
-  { type: "household", date: "2026-03-18" },
-  { type: "household", date: "2026-03-31" },
-  { type: "household", date: "2026-04-15" },
-  { type: "garden", date: "2026-04-17" },
+/**
+ * Schedule:
+ *  - Tunna 2 + Trädgårdsavfall every 2nd week (Tue / Fri).
+ *  - Tunna 1 every 4th week (Mon).
+ */
+const COLLECTIONS: RecurringCollection[] = [
+  { label: "Tunna 2", reminderText: "tunna 2", anchor: "2026-06-23", intervalDays: 14 },
+  { label: "Trädgårdsavfall", reminderText: "trädgårdsavfallet", anchor: "2026-06-26", intervalDays: 14 },
+  { label: "Tunna 1", reminderText: "tunna 1", anchor: "2026-07-06", intervalDays: 28 },
 ];
-
-const TYPE_LABELS: Record<"household" | "garden", string> = {
-  household: "Hushållssopor",
-  garden: "Trädgårdsavfall",
-};
-
-const REMINDER_TEXT: Record<"household" | "garden", string> = {
-  household: "hushållssoporna",
-  garden: "trädgårdsavfallet",
-};
 
 const dateFormat = new Intl.DateTimeFormat("sv-SE", { day: "2-digit", month: "2-digit" });
 const relativeFormat = new Intl.RelativeTimeFormat("sv-SE", { numeric: "auto" });
@@ -38,6 +39,10 @@ const relativeFormat = new Intl.RelativeTimeFormat("sv-SE", { numeric: "auto" })
 function parseLocalDate(str: string): Date {
   const [y, m, d] = str.split("-").map(Number);
   return new Date(y, m - 1, d);
+}
+
+function addDays(date: Date, days: number): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
 }
 
 function daysBetween(a: Date, b: Date): number {
@@ -49,33 +54,30 @@ function daysBetween(a: Date, b: Date): number {
 
 export function getGarbageData(
   now: Date = new Date(),
-  dates: CollectionEntry[] = GARBAGE_COLLECTION_DATES,
+  collections: RecurringCollection[] = COLLECTIONS,
 ): GarbageData {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  const upcoming = dates
-    .map((e) => ({ ...e, parsed: parseLocalDate(e.date) }))
-    .filter((e) => e.parsed >= today)
+  const upcoming = collections
+    .flatMap((c) => {
+      const anchor = parseLocalDate(c.anchor);
+      const first = Math.max(0, Math.ceil(daysBetween(anchor, today) / c.intervalDays));
+      // Two per stream is enough to find the next two overall.
+      return [first, first + 1].map((n) => ({ c, date: addDays(anchor, n * c.intervalDays) }));
+    })
+    .toSorted((a, b) => a.date.getTime() - b.date.getTime())
     .slice(0, 2);
 
-  const events: GarbageEvent[] = upcoming.map((e) => {
-    const days = daysBetween(today, e.parsed);
-    return {
-      type: e.type,
-      dateStr: dateFormat.format(e.parsed),
-      daysUntil: relativeFormat.format(days, "day"),
-      label: TYPE_LABELS[e.type],
-    };
-  });
+  const events: GarbageEvent[] = upcoming.map(({ c, date }) => ({
+    dateStr: dateFormat.format(date),
+    daysUntil: relativeFormat.format(daysBetween(today, date), "day"),
+    label: c.label,
+  }));
 
-  // Reminder if next collection is today or tomorrow
-  let reminder: string | null = null;
-  if (upcoming.length > 0) {
-    const daysToFirst = daysBetween(today, upcoming[0].parsed);
-    if (daysToFirst <= 1) {
-      reminder = `Dags att ställa ut ${REMINDER_TEXT[upcoming[0].type]}!`;
-    }
-  }
+  // Reminder if next collection is today or tomorrow.
+  const next = upcoming[0];
+  const reminder =
+    next && daysBetween(today, next.date) <= 1 ? `Dags att ställa ut ${next.c.reminderText}!` : null;
 
   return { events, reminder };
 }
