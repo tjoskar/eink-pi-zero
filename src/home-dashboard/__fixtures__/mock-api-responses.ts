@@ -4,35 +4,34 @@
  * Frozen test time: 2026-03-07 14:30:00 (Saturday)
  */
 
-const SAT_NOON = Math.floor(new Date(2026, 2, 7, 12, 0, 0).getTime() / 1000);
+// Local midnight of the frozen test day (Sat 2026-03-07).
+const DAY_START = new Date(2026, 2, 7, 0, 0, 0).getTime();
 
-export const MOCK_OPENWEATHER_RESPONSE = {
-  lat: 59.33,
-  lon: 18.07,
-  current: {
-    dt: SAT_NOON + 9000, // ~14:30
-    temp: 4.2,
-    weather: [{ id: 802, main: "Clouds", description: "scattered clouds", icon: "03d" }],
-    wind_speed: 3.8,
-    sunrise: SAT_NOON - 6 * 3600 + 1080, // ~06:18
-    sunset: SAT_NOON + 5 * 3600 + 3900, // ~17:05
-    uvi: 1.5,
-  },
-  hourly: Array.from({ length: 24 }, (_, i) => ({
-    dt: SAT_NOON - 12 * 3600 + i * 3600,
-    temp: 2 + Math.sin(i / 4) * 3,
-    weather: [{ icon: "03d" }],
-    uvi: i >= 10 && i <= 14 ? 2.5 : 0.5,
-  })),
-  daily: [
-    // Today (Sat) + 5 forecast days
-    { dt: SAT_NOON, temp: { min: 1, max: 5 }, weather: [{ icon: "03d" }] },
-    { dt: SAT_NOON + 86400, temp: { min: 0, max: 4 }, weather: [{ icon: "13d" }] },
-    { dt: SAT_NOON + 86400 * 2, temp: { min: -1, max: 3 }, weather: [{ icon: "01d" }] },
-    { dt: SAT_NOON + 86400 * 3, temp: { min: 2, max: 7 }, weather: [{ icon: "10d" }] },
-    { dt: SAT_NOON + 86400 * 4, temp: { min: 1, max: 6 }, weather: [{ icon: "02d" }] },
-    { dt: SAT_NOON + 86400 * 5, temp: { min: 3, max: 8 }, weather: [{ icon: "04d" }] },
-  ],
+// Wsymb2 symbol per forecast day: today + 5 ahead (variable, overcast, clear,
+// rain showers, halfclear, cloudy).
+const DAY_SYMBOLS = [3, 6, 1, 8, 4, 5];
+
+/**
+ * SMHI point-forecast shape: hourly `timeSeries` entries with a flat `data`
+ * object. Six days of hourly points so the transform can group a 5-day forecast.
+ */
+export const MOCK_SMHI_RESPONSE = {
+  referenceTime: new Date(DAY_START).toISOString(),
+  timeSeries: Array.from({ length: 24 * 6 }, (_, hour) => {
+    const t = new Date(DAY_START + hour * 3600000);
+    const dayIdx = Math.floor(hour / 24);
+    const hourOfDay = t.getHours();
+    return {
+      time: t.toISOString(),
+      data: {
+        air_temperature: Math.round((2 + Math.sin(hour / 4) * 3 - dayIdx * 0.5) * 10) / 10,
+        wind_speed: 3.8,
+        cloud_area_fraction: 40,
+        precipitation_amount_mean: hourOfDay >= 13 && hourOfDay <= 15 ? 0.4 : 0,
+        symbol_code: DAY_SYMBOLS[dayIdx] ?? 3,
+      },
+    };
+  }),
 };
 
 function makePriceEntries(

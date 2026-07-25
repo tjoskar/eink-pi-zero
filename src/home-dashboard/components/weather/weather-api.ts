@@ -1,17 +1,23 @@
 /**
- * OpenWeatherMap 3.0 OneCall API — fetch, cache, and transform.
+ * SMHI meteorological forecast API — fetch, cache, and transform.
+ *
+ * Uses SMHI's free open-data point forecast (no API key required). Sunrise/
+ * sunset and the UV index are computed locally (see ./solar.ts) since SMHI's
+ * forecast does not provide them.
+ *
+ * Endpoint (the older pmp3g/v2 endpoint was retired in March 2026):
+ *   https://opendata-download-metfcst.smhi.se/api/category/snow1g/version/1
+ *     /geotype/point/lon/{lon}/lat/{lat}/data.json
  *
  * Config via environment variables:
- *   WEATHER_API_KEY  — required
- *   WEATHER_LAT      — latitude  (default: 59.3293 — Stockholm)
- *   WEATHER_LON      — longitude (default: 18.0686)
- *   WEATHER_UNITS    — standard | metric | imperial (default: metric)
- *   WEATHER_LANG     — language code (default: en)
- *   CACHE_DURATION   — seconds (default: 3600)
- *   API_TIMEOUT      — milliseconds (default: 10000)
+ *   WEATHER_LAT     — latitude  (default: 59.3293 — Stockholm)
+ *   WEATHER_LON     — longitude (default: 18.0686)
+ *   CACHE_DURATION  — seconds (default: 3600)
+ *   API_TIMEOUT     — milliseconds (default: 10000)
  */
 
 import { getWeatherIconName } from "./weather-icons.ts";
+import { solarElevation, sunTimes, uvIndex } from "./solar.ts";
 import { fetchJson, createCache } from "#lib";
 import { config } from "../../config.ts";
 
@@ -37,24 +43,34 @@ export interface WeatherDisplayData {
   forecast: ForecastDay[];
 }
 
-const cache = createCache<Record<string, unknown>>({
+/** A single hourly point from SMHI's `timeSeries`, with a flat `data` object. */
+interface SmhiEntry {
+  time: string;
+  data: Record<string, number>;
+}
+
+interface SmhiResponse {
+  timeSeries: SmhiEntry[];
+}
+
+const cache = createCache<SmhiResponse>({
   file: "weather_cache.json",
   ttlSeconds: 1800,
   label: "Weather",
 });
 
-async function fetchFromApi(): Promise<Record<string, unknown> | null> {
+async function fetchFromApi(): Promise<SmhiResponse | null> {
   const url =
-    `https://api.openweathermap.org/data/3.0/onecall` +
-    `?lat=${config.weatherLat}&lon=${config.weatherLon}&units=${config.weatherUnits}&lang=${config.weatherLang}&appid=${config.weatherApiKey}`;
+    `https://opendata-download-metfcst.smhi.se/api/category/snow1g/version/1` +
+    `/geotype/point/lon/${config.weatherLon}/lat/${config.weatherLat}/data.json`;
 
-  return fetchJson<Record<string, unknown>>(url, {
+  return fetchJson<SmhiResponse>(url, {
     timeout: config.apiTimeout,
     label: "Weather",
   });
 }
 
-async function fetchWeatherData(): Promise<Record<string, unknown> | null> {
+async function fetchWeatherData(): Promise<SmhiResponse | null> {
   const cached = cache.read();
   if (cached) return cached;
 
@@ -72,92 +88,109 @@ async function fetchWeatherData(): Promise<Record<string, unknown> | null> {
   return null;
 }
 
-function getRainTotal(data: Record<string, any>): number {
-  const current = data.current ?? {};
-  const now = new Date((current.dt ?? Date.now() / 1000) * 1000);
+const fmtTime = (d: Date) => d.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+
+/** Sum of forecast precipitation (mm) for the rest of today. */
+function getRainTotal(series: SmhiEntry[], now: Date): number {
   const today = now.toDateString();
-  const hourly: any[] = data.hourly ?? [];
-
-  if (hourly.length === 0) {
-    return current.rain?.["1h"] ?? 0;
-  }
-
   let total = 0;
-  for (const hour of hourly) {
-    const hourDate = new Date((hour.dt ?? 0) * 1000);
-    if (hourDate.toDateString() !== today) continue;
-    if (hourDate < now) continue;
-    total += hour.rain?.["1h"] ?? 0;
+  for (const entry of series) {
+    const t = new Date(entry.time);
+    if (t.toDateString() !== today || t < now) continue;
+    // Within today SMHI reports hourly points; mean intensity (mm/h) ≈ mm/hour.
+    total += entry.data.precipitation_amount_mean ?? 0;
   }
   return total;
 }
 
-function getUvInfo(data: Record<string, any>): string {
-  const current = data.current ?? {};
-  const currentUv = current.uvi ?? 0;
-  const now = new Date((current.dt ?? Date.now() / 1000) * 1000);
+/** Current UV plus, if it gets strong today, the daily peak and the high-UV window. */
+function getUvInfo(
+  series: SmhiEntry[],
+  now: Date,
+  lat: number,
+  lon: number,
+  currentClouds: number,
+): string {
   const today = now.toDateString();
+  const currentUv = uvIndex(solarElevation(now, lat, lon), currentClouds);
 
   let maxUv = currentUv;
   const highUvHours: number[] = [];
-
-  for (const hour of (data.hourly ?? []) as any[]) {
-    const hourDate = new Date((hour.dt ?? 0) * 1000);
-    if (hourDate.toDateString() !== today) continue;
-
-    const uv = hour.uvi ?? 0;
+  for (const entry of series) {
+    const t = new Date(entry.time);
+    if (t.toDateString() !== today) continue;
+    const uv = uvIndex(solarElevation(t, lat, lon), entry.data.cloud_area_fraction ?? 0);
     if (uv > maxUv) maxUv = uv;
-    if (uv >= 3) highUvHours.push(hourDate.getHours());
+    if (uv >= 3) highUvHours.push(t.getHours());
   }
 
   if (highUvHours.length === 0) {
     return `${Math.round(currentUv)}`;
   }
-
   const minH = Math.min(...highUvHours);
   const maxH = Math.max(...highUvHours);
   return `${Math.round(currentUv)} (${Math.round(maxUv)}, ${minH} - ${maxH})`;
 }
 
-const fmtTime = (d: Date) => d.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+/** Group the hourly series into the next 5 days (excluding today). */
+function buildForecast(series: SmhiEntry[], now: Date): ForecastDay[] {
+  const today = now.toDateString();
+  const byDay = new Map<string, SmhiEntry[]>();
+  for (const entry of series) {
+    const key = new Date(entry.time).toDateString();
+    if (key === today) continue;
+    const bucket = byDay.get(key);
+    if (bucket) bucket.push(entry);
+    else byDay.set(key, [entry]);
+  }
 
-export async function getWeatherDisplayData(): Promise<WeatherDisplayData | null> {
-  const data = await fetchWeatherData();
-  if (!data) return null;
+  return [...byDay.entries()].slice(0, 5).map(([key, entries]) => {
+    const temps = entries.map((e) => e.data.air_temperature).filter((v) => typeof v === "number");
+    const min = Math.round(Math.min(...temps));
+    const max = Math.round(Math.max(...temps));
 
-  const current = data.current ?? {};
-  const temp = (current as any).temp ?? 0;
-  const iconCode = (current as any).weather?.[0]?.icon ?? "01d";
-  const windSpeed = (current as any).wind_speed ?? 0;
+    // Representative icon: the entry closest to local midday.
+    const midday = entries.reduce((best, e) =>
+      Math.abs(new Date(e.time).getHours() - 12) < Math.abs(new Date(best.time).getHours() - 12)
+        ? e
+        : best,
+    );
 
-  const sunrise = new Date(((current as any).sunrise ?? 0) * 1000);
-  const sunset = new Date(((current as any).sunset ?? 0) * 1000);
-
-  const rainTotal = getRainTotal(data as Record<string, any>);
-  const uvInfo = getUvInfo(data as Record<string, any>);
-
-  const daily: any[] = (data as any).daily ?? [];
-  const forecast: ForecastDay[] = daily.slice(1, 6).map((day) => {
-    const dt = new Date((day.dt ?? 0) * 1000);
-    const dayIconCode = day.weather?.[0]?.icon ?? "01d";
-    const min = Math.round(day.temp?.min ?? 0);
-    const max = Math.round(day.temp?.max ?? 0);
     return {
-      day: DAYS_OF_WEEK[dt.getDay()],
-      icon: getWeatherIconName(dayIconCode),
+      day: DAYS_OF_WEEK[new Date(key).getDay()],
+      icon: getWeatherIconName(midday.data.symbol_code ?? 1, false),
       temp: `${min}°/${max}°`,
     };
   });
+}
+
+export async function getWeatherDisplayData(): Promise<WeatherDisplayData | null> {
+  const data = await fetchWeatherData();
+  const series = data?.timeSeries ?? [];
+  if (series.length === 0) return null;
+
+  const now = new Date();
+  const lat = parseFloat(config.weatherLat);
+  const lon = parseFloat(config.weatherLon);
+
+  const current = series.find((e) => new Date(e.time) >= now) ?? series[0];
+  const temp = current.data.air_temperature ?? 0;
+  const windSpeed = current.data.wind_speed ?? 0;
+  const symbolCode = current.data.symbol_code ?? 1;
+
+  const { sunrise, sunset } = sunTimes(now, lat, lon);
+  const isNight = sunrise && sunset ? now < sunrise || now > sunset : false;
+  const sunLabel = sunrise && sunset ? `${fmtTime(sunrise)} / ${fmtTime(sunset)}` : "--:-- / --:--";
 
   return {
     current: {
       temp: `${Math.round(temp)}°`,
-      icon: getWeatherIconName(iconCode),
+      icon: getWeatherIconName(symbolCode, isNight),
       windSpeed: `${Math.round(windSpeed)} m/s`,
-      sunTimes: `${fmtTime(sunrise)} / ${fmtTime(sunset)}`,
-      rain: `${rainTotal.toFixed(1)} mm`,
-      uvInfo,
+      sunTimes: sunLabel,
+      rain: `${getRainTotal(series, now).toFixed(1)} mm`,
+      uvInfo: getUvInfo(series, now, lat, lon, current.data.cloud_area_fraction ?? 0),
     },
-    forecast,
+    forecast: buildForecast(series, now),
   };
 }

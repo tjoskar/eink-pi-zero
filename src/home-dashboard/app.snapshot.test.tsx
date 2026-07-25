@@ -2,7 +2,7 @@ import { afterAll, beforeAll, test, vi } from "vitest";
 import { registerFont, registerIconFont, setTheme, EINK_BW_THEME, setRequest } from "#lib";
 import type { RequestFn } from "#lib";
 import {
-  MOCK_OPENWEATHER_RESPONSE,
+  MOCK_SMHI_RESPONSE,
   MOCK_TIBBER_RESPONSE,
   MOCK_DISHES_RESPONSE,
 } from "./__fixtures__/mock-api-responses.ts";
@@ -44,7 +44,6 @@ let restoreRequest: () => void;
 beforeAll(() => {
   overrideConfig({
     tibberToken: "test-token",
-    weatherApiKey: "test-key",
     dishesApiUrl: "https://matsedel.example.com/api",
   });
   setTheme({ ...EINK_BW_THEME, defaultFont: "Noto Sans" });
@@ -55,8 +54,8 @@ beforeAll(() => {
     const url =
       typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 
-    if (url.includes("openweathermap.org")) {
-      return Response.json(MOCK_OPENWEATHER_RESPONSE);
+    if (url.includes("smhi.se")) {
+      return Response.json(MOCK_SMHI_RESPONSE);
     }
     if (url.includes("tibber.com")) {
       return Response.json(MOCK_TIBBER_RESPONSE);
