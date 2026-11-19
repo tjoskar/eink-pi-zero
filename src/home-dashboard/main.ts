@@ -70,9 +70,9 @@ async function main(): Promise<void> {
     onMessage(topic, value) {
       const devices = devicesState.get();
       const device = devices.get(topic);
-      if (!device) return;
+      if (!device) return false;
       const on = value === "on";
-      if (device.on === on) return;
+      if (device.on === on) return false;
       devicesState.set(new Map(devices).set(topic, { ...device, on }));
       console.log(`${device.label}: ${on ? "ON" : "OFF"}`);
 
@@ -81,6 +81,7 @@ async function main(): Promise<void> {
           console.error("LED error", err instanceof Error ? err : undefined),
         );
       }
+      return true;
     },
     onUpdate: () =>
       updateDisplay().catch((err) =>

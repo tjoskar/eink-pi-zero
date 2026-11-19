@@ -26,7 +26,8 @@ function createDebouncedUpdater(onUpdate: () => void): {
 }
 
 export function connectMqtt(opts: {
-  onMessage: (topic: string, value: string) => void;
+  /** Handle a message; return true if it changed rendered state. */
+  onMessage: (topic: string, value: string) => boolean;
   onUpdate: () => void;
 }): { publish: (topic: string, payload: string) => void } & AsyncDisposable {
   const url = `mqtt://${config.mqttHost}:${config.mqttPort}`;
@@ -48,8 +49,9 @@ export function connectMqtt(opts: {
   client.on("message", (topic: string, payload: Buffer) => {
     const value = payload.toString().toLowerCase();
     if (value !== "on" && value !== "off") return;
-    opts.onMessage(topic, value);
-    debouncer.schedule();
+    if (opts.onMessage(topic, value)) {
+      debouncer.schedule();
+    }
   });
 
   client.on("error", (err) => {
