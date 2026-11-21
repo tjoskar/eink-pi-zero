@@ -24,6 +24,7 @@ export function createEngineHeater(deps: {
   let confirmedOn = false;
   let shownOn = false;
   let noAnswer = false;
+  let disposed = false;
   let pending: { requested: boolean; timer: ReturnType<typeof setTimeout> } | null = null;
 
   function revert() {
@@ -35,9 +36,9 @@ export function createEngineHeater(deps: {
   }
 
   return {
-    /** Button press. Ignored while a Request is Pending. */
+    /** Button press. Ignored while a Request is Pending, or after disposing. */
     press() {
-      if (pending) return;
+      if (pending || disposed) return;
       const requested = !confirmedOn;
       deps.publish(requested ? "on" : "off");
       shownOn = requested;
@@ -72,6 +73,7 @@ export function createEngineHeater(deps: {
     },
 
     [Symbol.dispose]() {
+      disposed = true;
       if (pending) clearTimeout(pending.timer);
       pending = null;
     },

@@ -144,3 +144,14 @@ test("disposing cancels a Pending revert", () => {
 
   expect(renders).toBe(1);
 });
+
+test("a press after disposing is ignored", () => {
+  const heater = setup();
+  heater[Symbol.dispose]();
+
+  heater.press();
+
+  expect(published).toEqual([]);
+  expect(led).toEqual([]);
+  expect(renders).toBe(0);
+});

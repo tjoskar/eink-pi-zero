@@ -37,20 +37,31 @@ const ENGINE_HEATER_LED_PIN = 13;
 const REFRESH_INTERVAL_MS = 3_600_000;
 
 let isUpdating = false;
+let renderQueued = false;
 
+/**
+ * Render the dashboard to the panel. A call during a render queues one more
+ * render afterwards (calls coalesce), so state changed mid-render still shows.
+ */
 async function updateDisplay(): Promise<void> {
   if (isUpdating) {
-    console.log("Skipping update — render already in progress");
+    console.log("Render in progress — queueing another");
+    renderQueued = true;
     return;
   }
 
   isUpdating = true;
   try {
-    const imageBuffer = await renderApp();
-    await renderToDisplay(imageBuffer);
-    console.log("Display updated");
-  } catch (error) {
-    console.error("Failed to update display", error instanceof Error ? error : undefined);
+    do {
+      renderQueued = false;
+      try {
+        const imageBuffer = await renderApp();
+        await renderToDisplay(imageBuffer);
+        console.log("Display updated");
+      } catch (error) {
+        console.error("Failed to update display", error instanceof Error ? error : undefined);
+      }
+    } while (renderQueued);
   } finally {
     isUpdating = false;
   }
@@ -75,8 +86,26 @@ async function main(): Promise<void> {
     devicesState.set(new Map(devices).set(ENGINE_HEATER_TOPIC, { ...device, ...heater.shown() }));
   }
 
-  // MQTT messages arrive asynchronously after connect, so `heater` (declared
-  // below) is always initialised before onMessage first runs.
+  // Declared before `mqtt` so it is disposed after it: no Confirmed state can
+  // reach a disposed heater. It only publishes on a button press, and the
+  // button is subscribed after `mqtt` exists.
+  using heater = createEngineHeater({
+    publish(payload) {
+      console.log(`Button: Engine Heater Request → ${payload.toUpperCase()}`);
+      mqtt.publish(ENGINE_HEATER_REQUEST_TOPIC, payload);
+    },
+    setLed: (state) =>
+      setLed(ENGINE_HEATER_LED_PIN, state).catch((err) =>
+        console.error("LED error", err instanceof Error ? err : undefined),
+      ),
+    render() {
+      syncEngineHeaterDevice();
+      updateDisplay().catch((err) =>
+        console.error("Render error", err instanceof Error ? err : undefined),
+      );
+    },
+  });
+
   await using mqtt = connectMqtt({
     extraTopics: [ENGINE_HEATER_TOPIC],
     onMessage(topic, value) {
@@ -101,23 +130,6 @@ async function main(): Promise<void> {
       updateDisplay().catch((err) =>
         console.error("Render error", err instanceof Error ? err : undefined),
       ),
-  });
-
-  using heater = createEngineHeater({
-    publish(payload) {
-      console.log(`Button: Engine Heater Request → ${payload.toUpperCase()}`);
-      mqtt.publish(ENGINE_HEATER_REQUEST_TOPIC, payload);
-    },
-    setLed: (state) =>
-      setLed(ENGINE_HEATER_LED_PIN, state).catch((err) =>
-        console.error("LED error", err instanceof Error ? err : undefined),
-      ),
-    render() {
-      syncEngineHeaterDevice();
-      updateDisplay().catch((err) =>
-        console.error("Render error", err instanceof Error ? err : undefined),
-      );
-    },
   });
 
   await onButtonPress(ENGINE_HEATER_BUTTON_PIN, () => heater.press());
