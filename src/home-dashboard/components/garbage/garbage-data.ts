@@ -29,7 +29,12 @@ export interface RecurringCollection {
  */
 const COLLECTIONS: RecurringCollection[] = [
   { label: "Tunna 2", reminderText: "tunna 2", anchor: "2026-06-23", intervalDays: 14 },
-  { label: "Trädgårdsavfall", reminderText: "trädgårdsavfallet", anchor: "2026-06-26", intervalDays: 14 },
+  {
+    label: "Trädgårdsavfall",
+    reminderText: "trädgårdsavfallet",
+    anchor: "2026-06-26",
+    intervalDays: 14,
+  },
   { label: "Tunna 1", reminderText: "tunna 1", anchor: "2026-07-06", intervalDays: 28 },
 ];
 
@@ -77,7 +82,9 @@ export function getGarbageData(
   // Reminder if next collection is today or tomorrow.
   const next = upcoming[0];
   const reminder =
-    next && daysBetween(today, next.date) <= 1 ? `Dags att ställa ut ${next.c.reminderText}!` : null;
+    next && daysBetween(today, next.date) <= 1
+      ? `Dags att ställa ut ${next.c.reminderText}!`
+      : null;
 
   return { events, reminder };
 }

@@ -12,3 +12,7 @@ __pycache__/
 node_modules/
 dist
 .claude/settings.local.json
+
+# Local planning notes and prototype output (never committed)
+.scratch/
+src/home-dashboard/prototype-layout/out/
