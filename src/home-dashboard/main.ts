@@ -78,14 +78,6 @@ async function main(): Promise<void> {
     return;
   }
 
-  /** Copy the engine heater's shown state into the device column. */
-  function syncEngineHeaterDevice(): void {
-    const devices = devicesState.get();
-    const device = devices.get(ENGINE_HEATER_TOPIC);
-    if (!device) return;
-    devicesState.set(new Map(devices).set(ENGINE_HEATER_TOPIC, { ...device, ...heater.shown() }));
-  }
-
   // Declared before `mqtt` so it is disposed after it: no Confirmed state can
   // reach a disposed heater. It only publishes on a button press, and the
   // button is subscribed after `mqtt` exists.
@@ -98,12 +90,16 @@ async function main(): Promise<void> {
       setLed(ENGINE_HEATER_LED_PIN, state).catch((err) =>
         console.error("LED error", err instanceof Error ? err : undefined),
       ),
-    render() {
-      syncEngineHeaterDevice();
+    show(shown) {
+      const devices = devicesState.get();
+      const device = devices.get(ENGINE_HEATER_TOPIC);
+      if (device)
+        devicesState.set(new Map(devices).set(ENGINE_HEATER_TOPIC, { ...device, ...shown }));
+    },
+    render: () =>
       updateDisplay().catch((err) =>
         console.error("Render error", err instanceof Error ? err : undefined),
-      );
-    },
+      ),
   });
 
   await using mqtt = connectMqtt({
@@ -113,9 +109,7 @@ async function main(): Promise<void> {
 
       if (topic === ENGINE_HEATER_TOPIC) {
         console.log(`Engine Heater Confirmed state: ${on ? "ON" : "OFF"}`);
-        if (!heater.confirmed(on)) return false;
-        syncEngineHeaterDevice();
-        return true;
+        return heater.confirmed(on);
       }
 
       const devices = devicesState.get();

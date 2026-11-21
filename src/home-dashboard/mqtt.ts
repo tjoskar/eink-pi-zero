@@ -40,6 +40,10 @@ export function connectMqtt(opts: {
   const client = mqtt.connect(url, {
     username: config.mqttUsername,
     password: config.mqttPassword,
+    // Drop publishes made while offline instead of sending them on reconnect:
+    // a late engine heater Request would switch it long after the Dashboard
+    // showed "no answer".
+    queueQoSZero: false,
   });
 
   client.on("connect", () => {

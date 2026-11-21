@@ -12,26 +12,49 @@
 /** LED output: steady on/off, or blinking while a Request is Pending. */
 export type LedState = boolean | "blink";
 
+/** What the display shows for the heater. */
+export interface ShownState {
+  on: boolean;
+  /** A Request got no answer; shown until the next Confirmed state. */
+  noAnswer: boolean;
+}
+
 const PENDING_TIMEOUT_MS = 15_000;
 
 export function createEngineHeater(deps: {
   /** Publish a Request (`on`/`off`) to Home Assistant. */
   publish: (payload: "on" | "off") => void;
   setLed: (state: LedState) => void;
+  /** Store what the display should show; called on every change. */
+  show: (state: ShownState) => void;
   /** Re-render the display now. */
   render: () => void;
 }) {
   let confirmedOn = false;
-  let shownOn = false;
-  let noAnswer = false;
+  let shown: ShownState = { on: false, noAnswer: false };
+  // Unknown until the first command, so that one is always sent.
+  let led: LedState | null = null;
   let disposed = false;
   let pending: { requested: boolean; timer: ReturnType<typeof setTimeout> } | null = null;
 
+  function setLed(state: LedState) {
+    if (state === led) return;
+    led = state;
+    deps.setLed(state);
+  }
+
+  /** Returns true if what is shown changed. */
+  function show(next: ShownState): boolean {
+    if (next.on === shown.on && next.noAnswer === shown.noAnswer) return false;
+    shown = next;
+    deps.show(next);
+    return true;
+  }
+
   function revert() {
     pending = null;
-    shownOn = confirmedOn;
-    noAnswer = true;
-    deps.setLed(confirmedOn);
+    setLed(confirmedOn);
+    show({ on: confirmedOn, noAnswer: true });
     deps.render();
   }
 
@@ -41,9 +64,8 @@ export function createEngineHeater(deps: {
       if (pending || disposed) return;
       const requested = !confirmedOn;
       deps.publish(requested ? "on" : "off");
-      shownOn = requested;
-      noAnswer = false;
-      deps.setLed("blink");
+      setLed("blink");
+      show({ on: requested, noAnswer: false });
       pending = { requested, timer: setTimeout(revert, PENDING_TIMEOUT_MS) };
       deps.render();
     },
@@ -60,16 +82,8 @@ export function createEngineHeater(deps: {
         clearTimeout(pending.timer);
         pending = null;
       }
-      deps.setLed(on);
-      const changed = shownOn !== on || noAnswer;
-      shownOn = on;
-      noAnswer = false;
-      return changed;
-    },
-
-    /** What the display should show for the heater. */
-    shown(): { on: boolean; noAnswer: boolean } {
-      return { on: shownOn, noAnswer };
+      setLed(on);
+      return show({ on, noAnswer: false });
     },
 
     [Symbol.dispose]() {
