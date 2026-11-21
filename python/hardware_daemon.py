@@ -12,6 +12,7 @@ Protocol (JSON, one message per line):
 Node → Python:
   {"cmd": "button_subscribe", "pin": 21}
   {"cmd": "led", "pin": 13, "on": true}
+  {"cmd": "led", "pin": 13, "blink": true}   (blinks until the next led command)
   {"cmd": "render", "path": "/tmp/img.png", "fast": true, "clear": false}
   {"cmd": "shutdown"}
 
@@ -36,6 +37,9 @@ from PIL import Image
 
 # Import the Waveshare driver (same directory)
 from epd7in5_v2 import EPD
+
+# LED blink half-period (seconds)
+LED_BLINK_SEC = 0.5
 
 # Debounce time for buttons (seconds)
 BUTTON_DEBOUNCE_SEC = 0.05
@@ -79,8 +83,8 @@ def send_response(cmd: str) -> None:
 # LED Handling
 # =============================================================================
 
-def handle_led(pin: int, on: bool) -> None:
-    """Set LED state on given pin."""
+def handle_led(pin: int, on: bool, blink: bool = False) -> None:
+    """Set LED state on given pin; blink runs in a background thread until the next call."""
     global leds
 
     try:
@@ -88,8 +92,10 @@ def handle_led(pin: int, on: bool) -> None:
         if pin not in leds:
             leds[pin] = LED(pin)
 
-        # Set the value
-        if on:
+        # Set the value (on()/off() also stop a running blink)
+        if blink:
+            leds[pin].blink(on_time=LED_BLINK_SEC, off_time=LED_BLINK_SEC)
+        elif on:
             leds[pin].on()
         else:
             leds[pin].off()
@@ -255,10 +261,11 @@ def process_command(line: str) -> bool:
         if cmd == "led":
             pin = msg.get("pin")
             on = msg.get("on", False)
+            blink = msg.get("blink", False)
             if pin is None:
                 send_error("led command requires 'pin'")
             else:
-                handle_led(int(pin), bool(on))
+                handle_led(int(pin), bool(on), bool(blink))
 
         elif cmd == "button_subscribe":
             pin = msg.get("pin")

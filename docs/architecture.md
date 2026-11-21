@@ -118,12 +118,12 @@ eink-pi-zero/
 
 ## GPIO Configuration
 
-### Button and LED (configurable in `lib/hardware.ts`)
+### Button and LED (set by each app, e.g. `src/home-dashboard/main.ts`)
 
 | Function | GPIO Pin | Notes                              |
 | -------- | -------- | ---------------------------------- |
 | Button   | 21       | Active low, use gpiomon for events |
-| LED      | 22       | Active high                        |
+| LED      | 13       | Active high; can blink             |
 
 ### E-Ink Display (fixed in `python/epdconfig.py`)
 

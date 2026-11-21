@@ -13,6 +13,7 @@ import {
   ENGINE_HEATER_TOPIC,
   ENGINE_HEATER_REQUEST_TOPIC,
 } from "./components/devices/devices.tsx";
+import { createEngineHeater } from "./components/devices/engine-heater.ts";
 import {
   setTheme,
   EINK_BW_THEME,
@@ -66,21 +67,34 @@ async function main(): Promise<void> {
     return;
   }
 
+  /** Copy the engine heater's shown state into the device column. */
+  function syncEngineHeaterDevice(): void {
+    const devices = devicesState.get();
+    const device = devices.get(ENGINE_HEATER_TOPIC);
+    if (!device) return;
+    devicesState.set(new Map(devices).set(ENGINE_HEATER_TOPIC, { ...device, ...heater.shown() }));
+  }
+
+  // MQTT messages arrive asynchronously after connect, so `heater` (declared
+  // below) is always initialised before onMessage first runs.
   await using mqtt = connectMqtt({
+    extraTopics: [ENGINE_HEATER_TOPIC],
     onMessage(topic, value) {
+      const on = value === "on";
+
+      if (topic === ENGINE_HEATER_TOPIC) {
+        console.log(`Engine Heater Confirmed state: ${on ? "ON" : "OFF"}`);
+        if (!heater.confirmed(on)) return false;
+        syncEngineHeaterDevice();
+        return true;
+      }
+
       const devices = devicesState.get();
       const device = devices.get(topic);
       if (!device) return false;
-      const on = value === "on";
       if (device.on === on) return false;
       devicesState.set(new Map(devices).set(topic, { ...device, on }));
       console.log(`${device.label}: ${on ? "ON" : "OFF"}`);
-
-      if (topic === ENGINE_HEATER_TOPIC) {
-        setLed(ENGINE_HEATER_LED_PIN, on).catch((err) =>
-          console.error("LED error", err instanceof Error ? err : undefined),
-        );
-      }
       return true;
     },
     onUpdate: () =>
@@ -89,25 +103,24 @@ async function main(): Promise<void> {
       ),
   });
 
-  await onButtonPress(ENGINE_HEATER_BUTTON_PIN, () => {
-    const devices = devicesState.get();
-    const device = devices.get(ENGINE_HEATER_TOPIC);
-    if (!device) return;
-
-    const newOn = !device.on;
-
-    mqtt.publish(ENGINE_HEATER_REQUEST_TOPIC, newOn ? "on" : "off");
-    devicesState.set(new Map(devices).set(ENGINE_HEATER_TOPIC, { ...device, on: newOn }));
-    console.log(`Button: Engine Heater → ${newOn ? "ON" : "OFF"}`);
-
-    setLed(ENGINE_HEATER_LED_PIN, newOn).catch((err) =>
-      console.error("LED error", err instanceof Error ? err : undefined),
-    );
-
-    updateDisplay().catch((err) =>
-      console.error("Render error", err instanceof Error ? err : undefined),
-    );
+  using heater = createEngineHeater({
+    publish(payload) {
+      console.log(`Button: Engine Heater Request → ${payload.toUpperCase()}`);
+      mqtt.publish(ENGINE_HEATER_REQUEST_TOPIC, payload);
+    },
+    setLed: (state) =>
+      setLed(ENGINE_HEATER_LED_PIN, state).catch((err) =>
+        console.error("LED error", err instanceof Error ? err : undefined),
+      ),
+    render() {
+      syncEngineHeaterDevice();
+      updateDisplay().catch((err) =>
+        console.error("Render error", err instanceof Error ? err : undefined),
+      );
+    },
   });
+
+  await onButtonPress(ENGINE_HEATER_BUTTON_PIN, () => heater.press());
 
   using _refresh = setInterval(() => {
     const hour = new Date().getHours();
