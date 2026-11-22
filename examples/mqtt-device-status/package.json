@@ -8,6 +8,6 @@
   },
   "dependencies": {
     "@tjoskar/eink": "workspace:*",
-    "mqtt": "5.14.1"
+    "mqtt": "5.16.1"
   }
 }

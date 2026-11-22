@@ -162,10 +162,10 @@ function processResponse(data: TibberResponse): ElectricityData | null {
 
     for (const n of nodes) {
       if (n.consumption != null) {
-        consumption.push(Number(n.consumption));
+        consumption.push(n.consumption);
       }
       if (n.cost != null) {
-        consumptionCosts.push(Number(n.cost));
+        consumptionCosts.push(n.cost);
       }
     }
 

@@ -15,11 +15,11 @@ import { getWeatherIconName } from "./weather-icons.ts";
 import { fetchJson, createCache } from "@tjoskar/eink";
 
 const config = {
-  weatherApiKey: String(process.env.WEATHER_API_KEY ?? ""),
-  weatherLat: String(process.env.WEATHER_LAT ?? ""),
-  weatherLon: String(process.env.WEATHER_LON ?? ""),
-  weatherUnits: String(process.env.WEATHER_UNITS ?? ""),
-  weatherLang: String(process.env.WEATHER_LANG ?? ""),
+  weatherApiKey: process.env.WEATHER_API_KEY ?? "",
+  weatherLat: process.env.WEATHER_LAT ?? "",
+  weatherLon: process.env.WEATHER_LON ?? "",
+  weatherUnits: process.env.WEATHER_UNITS ?? "",
+  weatherLang: process.env.WEATHER_LANG ?? "",
   apiTimeout: Number(process.env.API_TIMEOUT ?? 1_000),
 };
 

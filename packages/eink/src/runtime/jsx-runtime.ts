@@ -38,7 +38,7 @@ export function jsx(
   type: string | ComponentFunction,
   props: Record<string, unknown> | null,
 ): JSXElement {
-  return { type, props: { ...props } as JSXElement["props"] };
+  return { type, props: { ...props } };
 }
 
 /**
