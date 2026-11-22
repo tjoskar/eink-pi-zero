@@ -1,13 +1,10 @@
 import { defineConfig } from "vitest/config";
-import path from "node:path";
 
 export default defineConfig({
-  resolve: {
-    alias: {
-      "#lib": path.resolve(import.meta.dirname, "lib/mod.ts"),
-      "#lib/": path.resolve(import.meta.dirname, "lib") + "/",
-    },
-  },
+  // Resolve @tjoskar/eink to its TypeScript source, not the built dist/.
+  ssr: { resolve: { conditions: ["source"] } },
+  // The Framework ships jsx-runtime only, not jsx-dev-runtime.
+  esbuild: { jsxDev: false },
   test: {
     projects: [
       {
@@ -15,7 +12,7 @@ export default defineConfig({
         test: {
           name: "unit",
           include: ["**/*.test.{ts,tsx}"],
-          exclude: ["**/*.snapshot.test.{ts,tsx}", "node_modules/**"],
+          exclude: ["**/*.snapshot.test.{ts,tsx}", "**/node_modules/**", "**/dist/**"],
           environment: "node",
         },
       },
@@ -24,7 +21,7 @@ export default defineConfig({
         test: {
           name: "snapshot",
           include: ["**/*.snapshot.test.{ts,tsx}"],
-          exclude: ["node_modules/**"],
+          exclude: ["**/node_modules/**", "**/dist/**"],
           environment: "node",
         },
       },

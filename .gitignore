@@ -15,4 +15,4 @@ dist
 
 # Local planning notes and prototype output (never committed)
 .scratch/
-src/home-dashboard/prototype-layout/out/
+dashboard/prototype-layout/out/

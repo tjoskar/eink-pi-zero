@@ -103,29 +103,30 @@ This must happen **atomically** with microsecond timing. When GPIO is managed by
 
 ```
 eink-pi-zero/
-├── lib/                        # Core framework
-│   └── mod.ts                  # Public API — re-exports everything
-├── src/                        # Example applications
-├── python/                     # Hardware interaction (Python)
-├── scripts/
-├── test/
-├── fonts/                      # Font files (Noto Sans, Material Icons, etc.)
-├── dist/                       # Built output (esbuild)
-└── package.json
+├── packages/eink/              # The Framework, @tjoskar/eink
+│   ├── src/mod.ts              # Public API — re-exports everything
+│   ├── python/                 # Hardware interaction (Python)
+│   ├── fonts/                  # Font files (Noto Sans, Material Icons, etc.)
+│   └── dist/                   # Built output (tsc: JS + .d.ts)
+├── examples/<name>/            # One package per Example
+├── dashboard/                  # The Dashboard; dist/ is its esbuild bundle
+├── scripts/                    # Pi deploy and setup
+├── test/                       # Snapshot test helpers
+└── pnpm-workspace.yaml
 ```
 
 ---
 
 ## GPIO Configuration
 
-### Button and LED (set by each app, e.g. `src/home-dashboard/main.ts`)
+### Button and LED (set by each app, e.g. `dashboard/main.ts`)
 
 | Function | GPIO Pin | Notes                              |
 | -------- | -------- | ---------------------------------- |
 | Button   | 21       | Active low, use gpiomon for events |
 | LED      | 13       | Active high; can blink             |
 
-### E-Ink Display (fixed in `python/epdconfig.py`)
+### E-Ink Display (fixed in `packages/eink/python/epdconfig.py`)
 
 | Function | GPIO Pin |
 | -------- | -------- |
@@ -142,7 +143,7 @@ eink-pi-zero/
 For development on macOS (or any non-Pi system):
 
 ```bash
-pnpm dev src/hello-world/main.tsx  # Automatically sets MOCK=1
+pnpm --filter hello-world dev  # Automatically sets MOCK=1
 ```
 
 In mock mode:

@@ -7,16 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      '@napi-rs/canvas':
-        specifier: 0.1.89
-        version: 0.1.89
-      mqtt:
-        specifier: 5.14.1
-        version: 5.14.1
-      yoga-layout:
-        specifier: 3.2.1
-        version: 3.2.1
     devDependencies:
       '@types/node':
         specifier: 22.0.0
@@ -51,6 +41,57 @@ importers:
       vitest:
         specifier: 4.1.0
         version: 4.1.0(@types/node@22.0.0)(vite@7.3.1(@types/node@22.0.0)(tsx@4.21.0))
+
+  dashboard:
+    dependencies:
+      '@tjoskar/eink':
+        specifier: workspace:*
+        version: link:../packages/eink
+      mqtt:
+        specifier: 5.14.1
+        version: 5.14.1
+
+  examples/fancy-hello-world:
+    dependencies:
+      '@tjoskar/eink':
+        specifier: workspace:*
+        version: link:../../packages/eink
+
+  examples/fetch-example-openweather:
+    dependencies:
+      '@tjoskar/eink':
+        specifier: workspace:*
+        version: link:../../packages/eink
+
+  examples/hello-world:
+    dependencies:
+      '@tjoskar/eink':
+        specifier: workspace:*
+        version: link:../../packages/eink
+
+  examples/hello-world-with-button:
+    dependencies:
+      '@tjoskar/eink':
+        specifier: workspace:*
+        version: link:../../packages/eink
+
+  examples/mqtt-device-status:
+    dependencies:
+      '@tjoskar/eink':
+        specifier: workspace:*
+        version: link:../../packages/eink
+      mqtt:
+        specifier: 5.14.1
+        version: 5.14.1
+
+  packages/eink:
+    dependencies:
+      '@napi-rs/canvas':
+        specifier: 0.1.89
+        version: 0.1.89
+      yoga-layout:
+        specifier: 3.2.1
+        version: 3.2.1
 
 packages:
 

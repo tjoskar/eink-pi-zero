@@ -1,19 +1,10 @@
 {
   "name": "eink-pi-zero",
-  "version": "1.0.0",
+  "private": true,
   "description": "E-ink display examples using JSX and TypeScript on Raspberry Pi Zero 2.",
   "type": "module",
-  "main": "./lib/mod.ts",
-  "imports": {
-    "#lib": "./lib/mod.ts",
-    "#lib/*": "./lib/*.js"
-  },
   "scripts": {
-    "dev": "MOCK=1 tsx --env-file=.env",
-    "dev:watch": "MOCK=1 tsx --env-file=.env --watch",
-    "render-once": "MOCK=1 RENDER_ONCE=1 tsx --env-file=.env",
-    "build": "esbuild src/*/main.tsx src/*/main.ts --bundle --platform=node --format=esm --outdir=dist --external:@napi-rs/canvas --external:mqtt --external:yoga-layout --sourcemap",
-    "start": "node --enable-source-maps dist/hello-world/main.js",
+    "build": "pnpm -r build",
     "deploy": "./scripts/deploy.sh",
     "typecheck": "tsgo --noEmit",
     "fmt": "oxfmt",
@@ -22,12 +13,7 @@
     "check": "oxfmt --check && oxlint && tsgo --noEmit",
     "test": "vitest run --project unit --passWithNoTests",
     "test:snapshot": "docker build -t eink-test -f Dockerfile.test . && docker run --rm eink-test",
-    "test:snapshot:update": "docker build -t eink-test -f Dockerfile.test . && docker run --rm -e UPDATE_SNAPSHOTS=1 -v ./src:/app/src eink-test"
-  },
-  "dependencies": {
-    "@napi-rs/canvas": "0.1.89",
-    "mqtt": "5.14.1",
-    "yoga-layout": "3.2.1"
+    "test:snapshot:update": "docker build -t eink-test -f Dockerfile.test . && docker run --rm -e UPDATE_SNAPSHOTS=1 -v ./examples:/app/examples -v ./dashboard:/app/dashboard eink-test"
   },
   "devDependencies": {
     "@types/node": "22.0.0",
