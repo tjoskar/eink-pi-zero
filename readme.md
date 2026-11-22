@@ -148,6 +148,15 @@ With TSX, components are declarative and composable. You don't think about absol
 
 The tradeoff: Python has much better GPIO and SPI support on the Pi. So the architecture is a hybrid — TypeScript handles all UI rendering, while a small Python daemon handles hardware (GPIO, buttons, LED, display) via JSON IPC. See [docs/architecture.md](./docs/architecture.md) for the full design rationale.
 
+## Releasing `@tjoskar/eink`
+
+Versions are set by hand and published from a tag:
+
+1. On `main`, add the release to `packages/eink/CHANGELOG.md` and run `pnpm -C packages/eink version <x.y.z> --no-git-tag-version`.
+2. Commit, then tag and push: `git tag eink-v<x.y.z> && git push origin main eink-v<x.y.z>`.
+
+The [release workflow](.github/workflows/release.yml) runs CI, checks that the tag matches the version, packs the package, checks the tarball and publishes it to npm with provenance (trusted publishing, no token). Versions below `1.0.0` run the whole workflow with `npm publish --dry-run`. To check the tarball locally: `scripts/pack-eink.sh eink-v<x.y.z>`.
+
 ## License
 
 MIT
