@@ -19,27 +19,35 @@ pnpm install
 cp .env.example .env
 
 # Run hello-world in mock mode
-pnpm dev src/hello-world/main.tsx
+pnpm --filter hello-world dev
 ```
 
-This renders an image to a temp directory. Open the path printed in the terminal to see the output.
+This renders `preview.png` in `examples/hello-world/`. Open it to see the output.
+
+## Repository layout
+
+```
+packages/eink/      the Framework, @tjoskar/eink (with its fonts/ and python/)
+examples/<name>/    one package per Example
+dashboard/          my own Dashboard
+```
+
+Examples and the Dashboard depend on `"@tjoskar/eink": "workspace:*"` and import only its public API, never each other.
 
 ## Examples
 
 The repo includes several examples to get you started:
 
-- `src/hello-world/` — Minimal example, renders text to the display
-- `src/fancy-hello-world/` — A more fancy hello world with an image
-- `src/hello-world-with-button/` — Adds a physical button interaction
-- `src/fetch-example-openweather/` — Fetches weather data and renders it
-- `src/mqtt-device-status/` — Listens for MQTT events and updates the display
-- `src/home-dashboard/` — A complete personal dashboard with weather, electricity prices, meal plans, garbage collection, and device status. See it as a reference for how to build a complete app, but you'll want to create your own to match your setup.
+- `examples/hello-world/` — Minimal example, renders text to the display
+- `examples/fancy-hello-world/` — A more fancy hello world with an image
+- `examples/hello-world-with-button/` — Adds a physical button interaction
+- `examples/fetch-example-openweather/` — Fetches weather data and renders it
+- `examples/mqtt-device-status/` — Listens for MQTT events and updates the display
+- `dashboard/` — A complete personal dashboard with weather, electricity prices, meal plans, garbage collection, and device status. See it as a reference for how to build a complete app, but you'll want to create your own to match your setup.
 
 ## Hello World
 
 ```tsx
-import { jsx } from "#lib";
-
 export function App() {
   return (
     <view width={800} height={480} padding={40} direction="column" gap={20} background="white">
@@ -55,26 +63,25 @@ export function App() {
 
 ## Creating Your Own App
 
-Install from GitHub:
+`@tjoskar/eink` is not on npm yet. Until it is, clone the repo and copy an Example folder, e.g. `examples/hello-world/` to `examples/my-app/`, and rename it in its `package.json`. JSX works through the automatic runtime; the repo's `tsconfig.json` sets
 
-```bash
-pnpm add tjoskar/eink-pi-zero#main
+```json
+"jsx": "react-jsx",
+"jsxImportSource": "@tjoskar/eink"
 ```
 
-Or clone the repo and create a new folder under `src/`:
-
 ```tsx
-// src/my-app/main.tsx
+// examples/my-app/main.tsx
 import {
-  jsx,
   Canvas,
   render,
   registerFont,
+  fontPath,
   setTheme,
   EINK_BW_THEME,
   renderToDisplay,
   initHardware,
-} from "#lib";
+} from "@tjoskar/eink";
 
 function App() {
   return (
@@ -87,7 +94,7 @@ function App() {
 }
 
 setTheme({ ...EINK_BW_THEME, defaultFont: "Noto Sans" });
-registerFont("./fonts/noto-sans-regular.ttf", "Noto Sans");
+registerFont(fontPath("noto-sans-regular.ttf"), "Noto Sans");
 
 const canvas = Canvas.create(800, 480);
 await render(<App />, canvas);
@@ -99,14 +106,15 @@ await renderToDisplay(canvas.toPng());
 Run it:
 
 ```bash
-pnpm dev src/my-app/main.tsx
+pnpm install
+pnpm --filter my-app dev
 ```
 
 ## Deploy to Raspberry Pi
 
 ```bash
 # Deploy to Pi with rsync
-pnpm deploy pi@raspberrypi.local
+pnpm run deploy pi@raspberrypi.local
 
 # On the Pi (first time only):
 sudo ./scripts/setup-pi.sh

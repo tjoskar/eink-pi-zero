@@ -1,2 +1,7 @@
+packages:
+  - packages/*
+  - examples/*
+  - dashboard
+
 onlyBuiltDependencies:
   - esbuild

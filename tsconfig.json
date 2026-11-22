@@ -1,21 +1,19 @@
 {
   "compilerOptions": {
-    "jsx": "react",
-    "jsxFactory": "jsx",
-    "jsxFragmentFactory": "Fragment",
+    "jsx": "react-jsx",
+    "jsxImportSource": "@tjoskar/eink",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "customConditions": ["source"],
     "target": "esnext",
+    "types": ["node"],
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "paths": {
-      "#lib": ["./lib/mod.ts"]
-    }
+    "allowSyntheticDefaultImports": true
   },
-  "include": ["lib/**/*", "src/**/*", "scripts/**/*", "test/**/*"],
-  "exclude": ["node_modules"]
+  "include": ["packages/*/src", "packages/*/scripts", "examples", "dashboard", "test"],
+  "exclude": ["**/node_modules", "**/dist"]
 }

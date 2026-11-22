@@ -1,0 +1,12 @@
+{
+  "name": "fancy-hello-world",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "MOCK=1 tsx --conditions=source --env-file-if-exists=../../.env main.tsx",
+    "dev:watch": "MOCK=1 tsx --conditions=source --env-file-if-exists=../../.env --watch main.tsx"
+  },
+  "dependencies": {
+    "@tjoskar/eink": "workspace:*"
+  }
+}

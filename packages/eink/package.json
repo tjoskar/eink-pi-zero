@@ -1,0 +1,53 @@
+{
+  "name": "@tjoskar/eink",
+  "version": "0.0.0",
+  "description": "Render JSX to a Waveshare e-ink panel from a Raspberry Pi.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tjoskar/eink-pi-zero.git",
+    "directory": "packages/eink"
+  },
+  "files": [
+    "dist",
+    "fonts",
+    "python",
+    "!python/__pycache__"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": "./src/mod.ts",
+      "types": "./dist/mod.d.ts",
+      "default": "./dist/mod.js"
+    },
+    "./jsx-runtime": {
+      "source": "./src/runtime/jsx-runtime.ts",
+      "types": "./dist/runtime/jsx-runtime.d.ts",
+      "default": "./dist/runtime/jsx-runtime.js"
+    }
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/mod.d.ts",
+        "default": "./dist/mod.js"
+      },
+      "./jsx-runtime": {
+        "types": "./dist/runtime/jsx-runtime.d.ts",
+        "default": "./dist/runtime/jsx-runtime.js"
+      }
+    }
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsgo -p tsconfig.build.json",
+    "hardware-debug": "tsx --conditions=source scripts/hardware-debug.ts"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "0.1.89",
+    "yoga-layout": "3.2.1"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
