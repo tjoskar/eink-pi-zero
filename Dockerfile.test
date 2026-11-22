@@ -1,6 +1,9 @@
-FROM node:24-slim
-RUN corepack enable
+# Node and pnpm come from mise.toml, the same versions as locally and in CI.
+FROM jdxcode/mise:2026.11.12-debian
 WORKDIR /app
+ENV MISE_TRUSTED_CONFIG_PATHS=/app
+COPY mise.toml ./
+RUN mise install
 COPY . .
 RUN pnpm install --frozen-lockfile
 CMD ["pnpm", "exec", "vitest", "run", "--project", "snapshot"]

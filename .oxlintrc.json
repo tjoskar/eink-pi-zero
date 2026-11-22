@@ -17,7 +17,8 @@
     "no-await-in-loop": "off",
     "typescript/no-unsafe-type-assertion": "off",
     "typescript/restrict-template-expressions": "off",
-    "no-map-spread": "off"
+    "no-map-spread": "off",
+    "no-underscore-dangle": "off"
   },
   "options": { "typeAware": true },
   "ignorePatterns": ["dist/", "node_modules/"]

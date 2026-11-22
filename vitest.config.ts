@@ -4,7 +4,7 @@ export default defineConfig({
   // Resolve @tjoskar/eink to its TypeScript source, not the built dist/.
   ssr: { resolve: { conditions: ["source"] } },
   // The Framework ships jsx-runtime only, not jsx-dev-runtime.
-  esbuild: { jsxDev: false },
+  oxc: { jsx: { development: false } },
   test: {
     projects: [
       {

@@ -3,5 +3,5 @@ packages:
   - examples/*
   - dashboard
 
-onlyBuiltDependencies:
-  - esbuild
+allowBuilds:
+  esbuild: true

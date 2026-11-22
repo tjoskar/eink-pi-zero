@@ -116,7 +116,7 @@ let currentTheme: Theme<string> = EINK_BW_THEME;
  * ```
  */
 export function setTheme<TColor extends string>(theme: Theme<TColor>): void {
-  currentTheme = theme as Theme<string>;
+  currentTheme = theme;
 }
 
 /**

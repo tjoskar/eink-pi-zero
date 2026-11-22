@@ -37,16 +37,33 @@ vi.mock("node:fs", async (importOriginal) => {
     },
     writeFileSync: (path: string, ...args: any[]) => {
       if (typeof path === "string" && path.includes(".cache/")) return;
-      return (actual.writeFileSync as any)(path, ...args);
+      (actual.writeFileSync as any)(path, ...args);
     },
     mkdirSync: (path: string, ...args: any[]) => {
       if (typeof path === "string" && path.includes(".cache")) return;
-      return (actual.mkdirSync as any)(path, ...args);
+      (actual.mkdirSync as any)(path, ...args);
     },
   };
 });
 
 let restoreRequest: () => void;
+
+const mockFetch: RequestFn = async (input, _init) => {
+  const url =
+    typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+
+  if (url.includes("openweathermap.org")) {
+    return Response.json(MOCK_OPENWEATHER_RESPONSE);
+  }
+  if (url.includes("tibber.com")) {
+    return Response.json(MOCK_TIBBER_RESPONSE);
+  }
+  if (url.includes("matsedel")) {
+    return Response.json(MOCK_DISHES_RESPONSE);
+  }
+
+  throw new Error(`Unexpected network request: ${url}`);
+};
 
 beforeAll(() => {
   overrideConfig({
@@ -57,23 +74,6 @@ beforeAll(() => {
   setTheme({ ...EINK_BW_THEME, defaultFont: "Noto Sans" });
   registerFont(fontPath("noto-sans-regular.ttf"), "Noto Sans");
   registerIconFont();
-
-  const mockFetch: RequestFn = async (input, _init) => {
-    const url =
-      typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
-
-    if (url.includes("openweathermap.org")) {
-      return Response.json(MOCK_OPENWEATHER_RESPONSE);
-    }
-    if (url.includes("tibber.com")) {
-      return Response.json(MOCK_TIBBER_RESPONSE);
-    }
-    if (url.includes("matsedel")) {
-      return Response.json(MOCK_DISHES_RESPONSE);
-    }
-
-    throw new Error(`Unexpected network request: ${url}`);
-  };
 
   restoreRequest = setRequest(mockFetch);
 });

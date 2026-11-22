@@ -40,9 +40,10 @@ for asset in python/hardware_daemon.py fonts/material-icons.woff; do
 done
 
 # The bundle leaves the native/runtime packages external; setup-pi.sh
-# installs them from this package.json.
-node -e '
-  const { packageManager } = require("./package.json");
+# installs them from this package.json. packageManager pins corepack's pnpm
+# on the Pi to the version in mise.toml (the pnpm running this script).
+PNPM_VERSION="$(pnpm --version)" node -e '
+  const packageManager = `pnpm@${process.env.PNPM_VERSION}`;
   const eink = require("./packages/eink/package.json").dependencies;
   const dashboard = require("./dashboard/package.json").dependencies;
   const dependencies = Object.fromEntries(

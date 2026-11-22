@@ -13,6 +13,7 @@ Want to build your own? You can find a pdf version of my book here: https://gith
 ## Quick Start
 
 ```bash
+mise install   # Node and pnpm, versions from mise.toml
 pnpm install
 
 # Copy environment config
@@ -128,12 +129,12 @@ The `setup-pi.sh` script installs system dependencies, enables SPI, sets up the 
 
 ## Prerequisites
 
-- **Node.js** >= 24
+- **Node.js** >= 26
 - **pnpm**
 - **Raspberry Pi Zero 2 W** with 64-bit Raspberry Pi OS
 - **Waveshare 7.5" V2 e-ink display** (800x480), or another Waveshare display with minor adjustments
 
-For local development, you only need Node.js and pnpm.
+For local development, you only need Node.js and pnpm. [mise](https://mise.jdx.dev) installs the versions pinned in `mise.toml`.
 
 ## Why TSX?
 
