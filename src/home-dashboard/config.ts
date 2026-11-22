@@ -3,7 +3,6 @@ const _config = {
   mqttPort: Number(process.env.MQTT_PORT ?? 1883),
   mqttUsername: String(process.env.MQTT_USERNAME ?? ""),
   mqttPassword: String(process.env.MQTT_PASSWORD ?? ""),
-  mqttTopicPrefix: String(process.env.MQTT_TOPIC_PREFIX ?? ""),
   tibberToken: String(process.env.TIBBER_TOKEN ?? ""),
   weatherApiKey: String(process.env.WEATHER_API_KEY ?? ""),
   weatherLat: String(process.env.WEATHER_LAT ?? ""),

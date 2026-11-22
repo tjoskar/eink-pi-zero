@@ -6,9 +6,10 @@
  * answer gets a small "no answer" mark next to its icon.
  */
 import { jsx, Icon, createState } from "#lib";
-import { config } from "../../config.ts";
 
-/** Confirmed state of the engine heater, published retained by Home Assistant. */
+/** Every Device's on/off state, published retained by Home Assistant. */
+export const STATECHANGE_TOPICS = "controlpanel/statechange/#";
+/** Confirmed state of the engine heater. */
 export const ENGINE_HEATER_TOPIC = "controlpanel/statechange/engine_heater";
 /** Requests to switch the engine heater on or off. */
 export const ENGINE_HEATER_REQUEST_TOPIC = "controlpanel/statechange/request/engine_heater";
@@ -23,16 +24,13 @@ export interface DeviceState {
 
 const initialDevices = new Map<string, DeviceState>([
   [
-    `${config.mqttTopicPrefix}/statechange/washing_machine`,
+    "controlpanel/statechange/washing_machine",
     { label: "Washing Machine", icon: "local_laundry_service", on: false },
   ],
-  [
-    `${config.mqttTopicPrefix}/statechange/dryer`,
-    { label: "Dryer", icon: "dry_cleaning", on: false },
-  ],
+  ["controlpanel/statechange/dryer", { label: "Dryer", icon: "dry_cleaning", on: false }],
   [ENGINE_HEATER_TOPIC, { label: "Engine Heater", icon: "local_fire_department", on: false }],
   [
-    `${config.mqttTopicPrefix}/statechange/bike_charger`,
+    "controlpanel/statechange/bike_charger",
     { label: "Bike Charger", icon: "electric_bike", on: false },
   ],
 ]);
