@@ -62,4 +62,4 @@ jobs:
             echo "::notice::Version below 1.0.0, publishing with --dry-run"
             args+=(--dry-run)
           fi
-          npm publish release/*.tgz "${args[@]}"
+          npm publish ./release/*.tgz "${args[@]}"
