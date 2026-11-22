@@ -3,7 +3,6 @@
   "compilerOptions": {
     "noEmit": false,
     "declaration": true,
-    "sourceMap": true,
     "rewriteRelativeImportExtensions": true,
     "customConditions": [],
     "rootDir": "src",

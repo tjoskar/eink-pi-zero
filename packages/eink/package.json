@@ -11,7 +11,8 @@
   "files": [
     "dist",
     "fonts",
-    "python"
+    "python",
+    "!python/__pycache__"
   ],
   "type": "module",
   "exports": {
@@ -24,6 +25,18 @@
       "source": "./src/runtime/jsx-runtime.ts",
       "types": "./dist/runtime/jsx-runtime.d.ts",
       "default": "./dist/runtime/jsx-runtime.js"
+    }
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/mod.d.ts",
+        "default": "./dist/mod.js"
+      },
+      "./jsx-runtime": {
+        "types": "./dist/runtime/jsx-runtime.d.ts",
+        "default": "./dist/runtime/jsx-runtime.js"
+      }
     }
   },
   "scripts": {

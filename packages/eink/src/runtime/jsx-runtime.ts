@@ -30,6 +30,9 @@ export type { JSX } from "./types.ts";
  * @param type - Element type: string for intrinsic, function for components
  * @param props - Element props, children included
  * @returns A JSXElement object
+ *
+ * The transform passes `key` as a third argument; it is ignored, since
+ * nothing here reconciles lists.
  */
 export function jsx(
   type: string | ComponentFunction,

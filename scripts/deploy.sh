@@ -32,13 +32,24 @@ cp dashboard/dist/main.js dashboard/dist/main.js.map "$STAGE/dist/home-dashboard
 cp -r packages/eink/fonts packages/eink/python scripts "$STAGE/"
 [ -f .env ] && cp .env "$STAGE/"
 
+for asset in python/hardware_daemon.py fonts/material-icons.woff; do
+  if [ ! -f "$STAGE/dist/home-dashboard/../../$asset" ]; then
+    echo "Bundle would not find $asset; check packages/eink/src/assets/paths.ts" >&2
+    exit 1
+  fi
+done
+
 # The bundle leaves the native/runtime packages external; setup-pi.sh
 # installs them from this package.json.
 node -e '
+  const { packageManager } = require("./package.json");
   const eink = require("./packages/eink/package.json").dependencies;
   const dashboard = require("./dashboard/package.json").dependencies;
-  const dependencies = { ...eink, mqtt: dashboard.mqtt };
-  console.log(JSON.stringify({ name: "eink-panel", private: true, type: "module", dependencies }, null, 2));
+  const dependencies = Object.fromEntries(
+    Object.entries({ ...eink, ...dashboard }).filter(([, v]) => !v.startsWith("workspace:")),
+  );
+  const pkg = { name: "eink-panel", private: true, type: "module", packageManager, dependencies };
+  console.log(JSON.stringify(pkg, null, 2));
 ' > "$STAGE/package.json"
 
 echo ""
