@@ -1,0 +1,65 @@
+# Publishes @tjoskar/eink to npm when a tag eink-v<version> is pushed from main.
+# Versions below 1.0.0 run everything but publish with --dry-run.
+name: Release
+on:
+  push:
+    tags: ["eink-v*"]
+permissions:
+  contents: read
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  pack:
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Tag is on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - uses: jdx/mise-action@v5
+      - run: pnpm install
+      - name: Build, pack and check the tarball
+        id: pack
+        run: |
+          tarball=$(scripts/pack-eink.sh "$GITHUB_REF_NAME")
+          echo "tarball=$tarball" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tarball
+          path: ${{ steps.pack.outputs.tarball }}
+          if-no-files-found: error
+
+  # No checkout of code to run and no install here: this job only holds the
+  # OIDC token and publishes the tarball the pack job checked.
+  publish:
+    needs: pack
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: mise.toml
+          sparse-checkout-cone-mode: false
+      - uses: jdx/mise-action@v5
+      - uses: actions/download-artifact@v8
+        with:
+          name: tarball
+          path: release
+      - name: npm publish
+        run: |
+          version=${GITHUB_REF_NAME#eink-v}
+          if [[ $version == *-* ]]; then
+            echo "::error::Prerelease $version would be published as latest; not supported"
+            exit 1
+          fi
+          args=(--provenance --access public)
+          if [[ $version == 0.* ]]; then
+            echo "::notice::Version below 1.0.0, publishing with --dry-run"
+            args+=(--dry-run)
+          fi
+          npm publish release/*.tgz "${args[@]}"
