@@ -342,15 +342,18 @@ export async function onButtonPress(pin: number, callback: ButtonCallback): Prom
  * Set LED state.
  *
  * @param pin - GPIO pin number
- * @param on - true to turn LED on, false to turn off
+ * @param state - true for on, false for off, "blink" to blink until the next call
  */
-export async function setLed(pin: number, on: boolean): Promise<void> {
+export async function setLed(pin: number, state: boolean | "blink"): Promise<void> {
   if (IS_MOCK) {
-    console.log(`[hardware] Mock LED pin ${pin}: ${on ? "ON" : "OFF"}`);
+    const label = state === "blink" ? "BLINK" : state ? "ON" : "OFF";
+    console.log(`[hardware] Mock LED pin ${pin}: ${label}`);
     return;
   }
 
-  await sendCommandWithResponse({ cmd: "led", pin, on });
+  await sendCommandWithResponse(
+    state === "blink" ? { cmd: "led", pin, blink: true } : { cmd: "led", pin, on: state },
+  );
 }
 
 /**

@@ -26,6 +26,8 @@ function createDebouncedUpdater(onUpdate: () => void): {
 }
 
 export function connectMqtt(opts: {
+  /** Topics to subscribe to besides everything under the topic prefix. */
+  extraTopics?: string[];
   /** Handle a message; return true if it changed rendered state. */
   onMessage: (topic: string, value: string) => boolean;
   onUpdate: () => void;
@@ -38,12 +40,16 @@ export function connectMqtt(opts: {
   const client = mqtt.connect(url, {
     username: config.mqttUsername,
     password: config.mqttPassword,
+    // Drop publishes made while offline instead of sending them on reconnect:
+    // a late engine heater Request would switch it long after the Dashboard
+    // showed "no answer".
+    queueQoSZero: false,
   });
 
   client.on("connect", () => {
-    const topic = `${config.mqttTopicPrefix}/#`;
-    console.log(`Connected to MQTT broker. Subscribing to ${topic}`);
-    client.subscribe(topic);
+    const topics = [`${config.mqttTopicPrefix}/#`, ...(opts.extraTopics ?? [])];
+    console.log(`Connected to MQTT broker. Subscribing to ${topics.join(", ")}`);
+    client.subscribe(topics);
   });
 
   client.on("message", (topic: string, payload: Buffer) => {

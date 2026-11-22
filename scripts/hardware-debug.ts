@@ -8,7 +8,7 @@
  *   npx tsx scripts/hardware-debug.ts
  *
  * Commands:
- *   led <pin> on|off     - Set LED state (e.g., "led 13 on")
+ *   led <pin> on|off|blink - Set LED state (e.g., "led 13 on")
  *   subscribe <pin>      - Subscribe to button events (e.g., "subscribe 21")
  *   render <path> [fast] - Render image to e-ink (e.g., "render /tmp/img.png fast")
  *   exit                 - Exit the CLI
@@ -26,7 +26,7 @@ const rl = readline.createInterface({
 function printHelp(): void {
   console.log(`
 Hardware Debug CLI - Commands:
-  led <pin> on|off     - Set LED state (e.g., "led 13 on")
+  led <pin> on|off|blink - Set LED state (e.g., "led 13 on")
   subscribe <pin>      - Subscribe to button events (e.g., "subscribe 21")
   render <path> [fast] - Render image to e-ink (e.g., "render /tmp/img.png fast")
   help                 - Show this help
@@ -45,11 +45,11 @@ async function handleCommand(line: string): Promise<boolean> {
       case "led": {
         const pin = parseInt(parts[1], 10);
         const state = parts[2]?.toLowerCase();
-        if (isNaN(pin) || (state !== "on" && state !== "off")) {
-          console.log("Usage: led <pin> on|off");
+        if (isNaN(pin) || (state !== "on" && state !== "off" && state !== "blink")) {
+          console.log("Usage: led <pin> on|off|blink");
           break;
         }
-        await setLed(pin, state === "on");
+        await setLed(pin, state === "blink" ? "blink" : state === "on");
         console.log(`✓ LED ${pin} ${state}`);
         break;
       }

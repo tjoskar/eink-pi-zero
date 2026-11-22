@@ -13,6 +13,7 @@ import {
   ENGINE_HEATER_TOPIC,
   ENGINE_HEATER_REQUEST_TOPIC,
 } from "./components/devices/devices.tsx";
+import { createEngineHeater } from "./components/devices/engine-heater.ts";
 import {
   setTheme,
   EINK_BW_THEME,
@@ -36,20 +37,31 @@ const ENGINE_HEATER_LED_PIN = 13;
 const REFRESH_INTERVAL_MS = 3_600_000;
 
 let isUpdating = false;
+let renderQueued = false;
 
+/**
+ * Render the dashboard to the panel. A call during a render queues one more
+ * render afterwards (calls coalesce), so state changed mid-render still shows.
+ */
 async function updateDisplay(): Promise<void> {
   if (isUpdating) {
-    console.log("Skipping update — render already in progress");
+    console.log("Render in progress — queueing another");
+    renderQueued = true;
     return;
   }
 
   isUpdating = true;
   try {
-    const imageBuffer = await renderApp();
-    await renderToDisplay(imageBuffer);
-    console.log("Display updated");
-  } catch (error) {
-    console.error("Failed to update display", error instanceof Error ? error : undefined);
+    do {
+      renderQueued = false;
+      try {
+        const imageBuffer = await renderApp();
+        await renderToDisplay(imageBuffer);
+        console.log("Display updated");
+      } catch (error) {
+        console.error("Failed to update display", error instanceof Error ? error : undefined);
+      }
+    } while (renderQueued);
   } finally {
     isUpdating = false;
   }
@@ -66,21 +78,46 @@ async function main(): Promise<void> {
     return;
   }
 
+  // Declared before `mqtt` so it is disposed after it: no Confirmed state can
+  // reach a disposed heater. It only publishes on a button press, and the
+  // button is subscribed after `mqtt` exists.
+  using heater = createEngineHeater({
+    publish(payload) {
+      console.log(`Button: Engine Heater Request → ${payload.toUpperCase()}`);
+      mqtt.publish(ENGINE_HEATER_REQUEST_TOPIC, payload);
+    },
+    setLed: (state) =>
+      setLed(ENGINE_HEATER_LED_PIN, state).catch((err) =>
+        console.error("LED error", err instanceof Error ? err : undefined),
+      ),
+    show(shown) {
+      const devices = devicesState.get();
+      const device = devices.get(ENGINE_HEATER_TOPIC);
+      if (device)
+        devicesState.set(new Map(devices).set(ENGINE_HEATER_TOPIC, { ...device, ...shown }));
+    },
+    render: () =>
+      updateDisplay().catch((err) =>
+        console.error("Render error", err instanceof Error ? err : undefined),
+      ),
+  });
+
   await using mqtt = connectMqtt({
+    extraTopics: [ENGINE_HEATER_TOPIC],
     onMessage(topic, value) {
+      const on = value === "on";
+
+      if (topic === ENGINE_HEATER_TOPIC) {
+        console.log(`Engine Heater Confirmed state: ${on ? "ON" : "OFF"}`);
+        return heater.confirmed(on);
+      }
+
       const devices = devicesState.get();
       const device = devices.get(topic);
       if (!device) return false;
-      const on = value === "on";
       if (device.on === on) return false;
       devicesState.set(new Map(devices).set(topic, { ...device, on }));
       console.log(`${device.label}: ${on ? "ON" : "OFF"}`);
-
-      if (topic === ENGINE_HEATER_TOPIC) {
-        setLed(ENGINE_HEATER_LED_PIN, on).catch((err) =>
-          console.error("LED error", err instanceof Error ? err : undefined),
-        );
-      }
       return true;
     },
     onUpdate: () =>
@@ -89,25 +126,7 @@ async function main(): Promise<void> {
       ),
   });
 
-  await onButtonPress(ENGINE_HEATER_BUTTON_PIN, () => {
-    const devices = devicesState.get();
-    const device = devices.get(ENGINE_HEATER_TOPIC);
-    if (!device) return;
-
-    const newOn = !device.on;
-
-    mqtt.publish(ENGINE_HEATER_REQUEST_TOPIC, newOn ? "on" : "off");
-    devicesState.set(new Map(devices).set(ENGINE_HEATER_TOPIC, { ...device, on: newOn }));
-    console.log(`Button: Engine Heater → ${newOn ? "ON" : "OFF"}`);
-
-    setLed(ENGINE_HEATER_LED_PIN, newOn).catch((err) =>
-      console.error("LED error", err instanceof Error ? err : undefined),
-    );
-
-    updateDisplay().catch((err) =>
-      console.error("Render error", err instanceof Error ? err : undefined),
-    );
-  });
+  await onButtonPress(ENGINE_HEATER_BUTTON_PIN, () => heater.press());
 
   using _refresh = setInterval(() => {
     const hour = new Date().getHours();

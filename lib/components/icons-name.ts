@@ -88,6 +88,7 @@ export const ICON_CODEPOINTS: Record<string, string> = {
   dry_cleaning: "\ue54a",
   local_fire_department: "\ue531",
   electric_bike: "\ueb1b",
+  sync_problem: "\ue629",
 
   // Time & Calendar
   schedule: "\ue8b5",
