@@ -114,7 +114,7 @@ pnpm --filter my-app dev
 
 ```bash
 # Deploy to Pi with rsync
-pnpm deploy pi@raspberrypi.local
+pnpm run deploy pi@raspberrypi.local
 
 # On the Pi (first time only):
 sudo ./scripts/setup-pi.sh
