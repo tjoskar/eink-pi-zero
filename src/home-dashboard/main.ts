@@ -11,6 +11,7 @@ import { config } from "./config.ts";
 import {
   devicesState,
   ENGINE_HEATER_TOPIC,
+  STATECHANGE_TOPICS,
   ENGINE_HEATER_REQUEST_TOPIC,
 } from "./components/devices/devices.tsx";
 import { createEngineHeater } from "./components/devices/engine-heater.ts";
@@ -103,7 +104,7 @@ async function main(): Promise<void> {
   });
 
   await using mqtt = connectMqtt({
-    extraTopics: [ENGINE_HEATER_TOPIC],
+    topics: [STATECHANGE_TOPICS],
     onMessage(topic, value) {
       const on = value === "on";
 
