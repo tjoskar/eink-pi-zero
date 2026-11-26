@@ -22,6 +22,7 @@ import Yoga, {
   Justify,
   Edge,
   Gutter,
+  MeasureMode,
   type Node as YogaNode,
 } from "yoga-layout";
 
@@ -202,6 +203,18 @@ export class YogaLayoutEngine implements LayoutEngine {
     // Flex shrink
     if (style.flexShrink !== undefined) {
       yogaNode.setFlexShrink(style.flexShrink);
+    }
+
+    // Content width of leaves such as text. A box narrower than the content
+    // gets the box width; drawing then shortens the content to fit.
+    const { measureWidth } = node;
+    if (measureWidth) {
+      yogaNode.setMeasureFunc((width, widthMode) => {
+        const natural = measureWidth();
+        if (widthMode === MeasureMode.Exactly) return { width, height: 0 };
+        if (widthMode === MeasureMode.AtMost) return { width: Math.min(natural, width), height: 0 };
+        return { width: natural, height: 0 };
+      });
     }
 
     // Recursively add children

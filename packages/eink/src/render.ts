@@ -2,7 +2,8 @@ import type { Canvas } from "./canvas/napi-canvas.ts";
 import type { LayoutNode, LayoutResult, LayoutBox } from "./layout/types.ts";
 import { getLayoutEngine } from "./layout/mod.ts";
 import type { JSXElement, JSXChildren, LineChartProps, TextProps } from "./runtime/types.ts";
-import { resolveColor, buildFontString } from "./theme.ts";
+import { resolveColor, buildFontString, getDefaultFont } from "./theme.ts";
+import { measureTextWidth, fitText } from "./canvas/measure-text.ts";
 
 /**
  * Recursively resolve function components to intrinsic elements.
@@ -91,7 +92,19 @@ async function buildLayoutTree(element: JSXElement): Promise<LayoutNode> {
     }
   }
 
+  // Text without an explicit width is as wide as its content
+  let measureWidth: (() => number) | undefined;
+  if (type === "text" && props.width === undefined && childNodes.length === 0) {
+    const textProps = props as TextProps;
+    const text = getTextContent(props.children);
+    const font = buildFontString(textProps.size, textProps.font, textProps.weight);
+    const family = textProps.font ?? getDefaultFont();
+    // Rounded up so Yoga's pixel rounding never makes the box narrower than the text
+    measureWidth = () => Math.ceil(measureTextWidth(text, font, family));
+  }
+
   return {
+    measureWidth,
     style: {
       width: props.width,
       height,
@@ -299,9 +312,14 @@ async function drawElement(
       canvas.setFont(fontString);
       canvas.setFillColor(resolveColor(textProps.color ?? "black"));
 
-      // Get text content and draw
-      const text = getTextContent(props.children);
+      // Get text content, shortened with "…" if the box is too narrow
       const padding = props.padding ?? 0;
+      const text = fitText(
+        getTextContent(props.children),
+        box.width - 2 * padding,
+        fontString,
+        textProps.font ?? getDefaultFont(),
+      );
 
       // Vertically center text within its box
       canvas.setTextBaseline("middle");
