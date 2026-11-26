@@ -2,8 +2,7 @@
   "name": "dashboard",
   "private": true,
   "files": [
-    "dist",
-    "eink-dashboard.service"
+    "dist"
   ],
   "type": "module",
   "scripts": {

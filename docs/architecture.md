@@ -149,7 +149,6 @@ pnpm --filter hello-world dev  # Automatically sets MOCK=1
 In mock mode:
 
 - Press `'b'` key to simulate button press
-- Images saved to `/tmp/eink-panel/latest.png`
 - No GPIO/SPI calls made
 - MQTT connection optional (will continue without it)
 

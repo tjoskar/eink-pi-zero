@@ -23,7 +23,7 @@ Once per Pi (64-bit Raspberry Pi OS), before the first `pnpm pi:deploy dashboard
 curl -fsSL https://deb.nodesource.com/setup_26.x | sudo bash -
 sudo apt install -y nodejs
 
-# SPI for the panel, then reboot
+# SPI for the panel
 sudo raspi-config nonint do_spi 0
 
 # The Framework's Python hardware daemon (until it is replaced by Node)
@@ -32,6 +32,18 @@ sudo usermod -aG gpio,spi "$USER"
 
 # Start the user unit at boot without a login
 sudo loginctl enable-linger "$USER"
+
+# For SPI and the new groups
+sudo reboot
 ```
 
-Settings go in `dashboard/.env.pi` on your computer (copy `.env.example`). Logs: `journalctl --user -u eink-dashboard -f`.
+Moving from the old system unit (`eink-panel`, deployed to `~/eink-panel/`)? Remove it first, so it never drives the panel at the same time as the new one:
+
+```bash
+sudo systemctl disable --now eink-panel
+sudo rm /etc/systemd/system/eink-panel.service /etc/logrotate.d/eink-panel
+sudo systemctl daemon-reload
+rm -rf ~/eink-panel
+```
+
+Settings go in `dashboard/.env.pi` on your computer (copy `.env.example`). Logs: `journalctl --user-unit eink-dashboard -f`.

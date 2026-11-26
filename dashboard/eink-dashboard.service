@@ -1,6 +1,6 @@
 # systemd user unit for the Dashboard, installed by `pnpm pi:deploy dashboard <host>`.
 # Starting at boot needs lingering, once per Pi: sudo loginctl enable-linger $USER
-# Logs: journalctl --user -u eink-dashboard -f
+# Logs: journalctl --user-unit eink-dashboard -f
 
 [Unit]
 Description=Home Dashboard on the e-ink panel
