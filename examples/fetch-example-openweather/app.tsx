@@ -25,11 +25,9 @@ function CurrentWeather({ data }: { data: WeatherDisplayData["current"] }) {
       {/* Big icon + temp */}
       <view direction="row" gap={16} align="center">
         <Icon name={data.icon} size={108} color="black" />
-        <view width={80}>
-          <text size={64} color="black">
-            {data.temp}
-          </text>
-        </view>
+        <text size={64} color="black">
+          {data.temp}
+        </text>
       </view>
 
       {/* Detail column */}
@@ -45,7 +43,7 @@ function CurrentWeather({ data }: { data: WeatherDisplayData["current"] }) {
 
 function ForecastItem({ item }: { item: ForecastDay }) {
   return (
-    <view direction="column" gap={8} width={56}>
+    <view direction="column" gap={8} minWidth={56}>
       <text size={16} color="black" textAlign="center">
         {item.day}
       </text>

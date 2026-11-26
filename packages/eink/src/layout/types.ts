@@ -114,6 +114,11 @@ export interface LayoutStyle {
 export interface LayoutNode {
   style: LayoutStyle;
   children: LayoutNode[];
+  /**
+   * Natural content width of a leaf (e.g. text), used when `style.width` is
+   * not set. The node's height still comes from `style`.
+   */
+  measureWidth?: () => number;
 }
 
 /**
