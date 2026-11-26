@@ -13,3 +13,25 @@ All pins are BCM GPIO numbers, with the physical header pin in brackets. Verifie
 | Second button (unused) | GPIO20 | 38 (GND shared with the engine-heater button, pin 39; not visually verified) | Active low, internal pull-up, needs 50 ms debounce (bounces heavily without it). Wired and working, but no code reads it yet |
 
 The e-paper HAT uses physical pins 1, 6, 11, 12, 18, 19, 22, 23 and 24 (3V3, GND, RST GPIO17, PWR GPIO18, BUSY GPIO24, MOSI, DC GPIO25, SCLK, CS).
+
+## Pi setup
+
+Once per Pi (64-bit Raspberry Pi OS), before the first `pnpm pi:deploy dashboard <user@host>`:
+
+```bash
+# Node 26 from NodeSource
+curl -fsSL https://deb.nodesource.com/setup_26.x | sudo bash -
+sudo apt install -y nodejs
+
+# SPI for the panel, then reboot
+sudo raspi-config nonint do_spi 0
+
+# The Framework's Python hardware daemon (until it is replaced by Node)
+sudo apt install -y python3-pil python3-spidev python3-gpiozero gpiod
+sudo usermod -aG gpio,spi "$USER"
+
+# Start the user unit at boot without a login
+sudo loginctl enable-linger "$USER"
+```
+
+Settings go in `dashboard/.env.pi` on your computer (copy `.env.example`). Logs: `journalctl --user -u eink-dashboard -f`.

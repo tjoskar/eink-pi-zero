@@ -1,4 +1,5 @@
 .env
+.env.pi
 logs/
 venv
 __pycache__/

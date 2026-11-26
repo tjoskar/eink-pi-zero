@@ -3,11 +3,8 @@
  *
  * They ship next to the code, so they are resolved from this module rather
  * than from the working directory. This file is two levels below the package
- * root both as source (src/assets/) and when built (dist/assets/).
- *
- * The Dashboard bundle (dist/home-dashboard/main.js on the Pi) sits at the
- * same depth, so there the root is the deploy directory, which holds fonts/
- * and python/.
+ * root both as source (src/assets/) and when built (dist/assets/). Apps
+ * must not bundle the Framework, or this path would point into the app.
  */
 import { join } from "node:path";
 

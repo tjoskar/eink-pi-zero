@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r build",
-    "deploy": "./scripts/deploy.sh",
+    "pi:deploy": "scripts/pi-deploy.sh",
     "typecheck": "tsgo --noEmit",
     "fmt": "oxfmt",
     "lint": "oxlint",

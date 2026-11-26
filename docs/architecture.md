@@ -110,7 +110,7 @@ eink-pi-zero/
 │   └── dist/                   # Built output (tsc: JS + .d.ts)
 ├── examples/<name>/            # One package per Example
 ├── dashboard/                  # The Dashboard; dist/ is its esbuild bundle
-├── scripts/                    # Pi deploy and setup
+├── scripts/                    # pi-deploy.sh, release packing
 ├── test/                       # Snapshot test helpers
 └── pnpm-workspace.yaml
 ```
