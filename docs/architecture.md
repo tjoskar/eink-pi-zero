@@ -110,7 +110,7 @@ eink-pi-zero/
 │   └── dist/                   # Built output (tsc: JS + .d.ts)
 ├── examples/<name>/            # One package per Example
 ├── dashboard/                  # The Dashboard; dist/ is its esbuild bundle
-├── scripts/                    # Pi deploy and setup
+├── scripts/                    # pi-deploy.sh, release packing
 ├── test/                       # Snapshot test helpers
 └── pnpm-workspace.yaml
 ```
@@ -149,7 +149,6 @@ pnpm --filter hello-world dev  # Automatically sets MOCK=1
 In mock mode:
 
 - Press `'b'` key to simulate button press
-- Images saved to `/tmp/eink-panel/latest.png`
 - No GPIO/SPI calls made
 - MQTT connection optional (will continue without it)
 

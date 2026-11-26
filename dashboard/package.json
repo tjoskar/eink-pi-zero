@@ -1,12 +1,15 @@
 {
   "name": "dashboard",
   "private": true,
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "scripts": {
     "dev": "MOCK=1 tsx --conditions=source --env-file-if-exists=../.env main.ts",
     "dev:watch": "MOCK=1 tsx --conditions=source --env-file-if-exists=../.env --watch main.ts",
     "render-once": "MOCK=1 RENDER_ONCE=1 tsx --conditions=source --env-file-if-exists=../.env main.ts",
-    "build": "rm -rf dist && esbuild main.ts --bundle --platform=node --format=esm --conditions=source --outfile=dist/main.js --external:@napi-rs/canvas --external:mqtt --external:yoga-layout --sourcemap",
+    "build": "rm -rf dist && esbuild main.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/main.js --sourcemap",
     "mqtt-debug": "node --env-file-if-exists=../.env scripts/mqtt-debug.ts"
   },
   "dependencies": {

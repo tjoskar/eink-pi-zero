@@ -113,19 +113,15 @@ pnpm --filter my-app dev
 
 ## Deploy to Raspberry Pi
 
+Apps are built on your computer; the Pi only needs Node.
+
 ```bash
-# Deploy to Pi with rsync
-pnpm run deploy pi@raspberrypi.local
-
-# On the Pi (first time only):
-sudo ./scripts/setup-pi.sh
-
-# Start the service:
-sudo systemctl start eink-panel
-sudo systemctl enable eink-panel
+pnpm pi:deploy dashboard pi@raspberrypi.local
 ```
 
-The `setup-pi.sh` script installs system dependencies, enables SPI, sets up the systemd service, and configures log rotation.
+This builds the app, packs it with its production dependencies for linux/arm64 and rsyncs it to `~/eink/<app>/` on the Pi. An app with a systemd user unit (`<app>/eink-<app>.service`) is installed and restarted; for the others the script prints the start command. Settings go in a gitignored `<app>/.env.pi`, copied to the Pi as `.env` (see the app's `.env.example`).
+
+One-time Pi setup is in [dashboard/README.md](dashboard/README.md#pi-setup).
 
 ## Prerequisites
 

@@ -1,0 +1,19 @@
+# systemd user unit for the Dashboard, installed by `pnpm pi:deploy dashboard <host>`.
+# Starting at boot needs lingering, once per Pi: sudo loginctl enable-linger $USER
+# Logs: journalctl --user-unit eink-dashboard -f
+
+[Unit]
+Description=Home Dashboard on the e-ink panel
+# Give up after 5 crashes within an hour instead of retrying forever.
+StartLimitIntervalSec=1h
+StartLimitBurst=5
+
+[Service]
+WorkingDirectory=%h/eink/dashboard
+ExecStart=/usr/bin/node --env-file=.env --enable-source-maps dist/main.js
+Environment=TZ=Europe/Stockholm NODE_ENV=production
+Restart=on-failure
+RestartSec=60
+
+[Install]
+WantedBy=default.target
