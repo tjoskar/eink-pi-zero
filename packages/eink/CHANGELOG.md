@@ -7,7 +7,7 @@ All notable changes to `@tjoskar/eink` are documented here. The format is based 
 ### Added
 
 - `<text>` without an explicit `width` is now as wide as its text (measured with the same font as it is drawn), so several texts in a row lay out side by side instead of collapsing to 0 px. An explicit `width` still wins. Single line only; height is unchanged.
-- Text wider than its box is shortened with a trailing `…` instead of drawing outside the box.
+- Text wider than its box is shortened with a trailing `…` instead of drawing outside the box. Its box only gets narrower than the text with an explicit `width`/`maxWidth`, by stretching, or with `flexShrink` (which defaults to 0), so long texts in a too-narrow row still overflow.
 - A warning is logged once per font family that is used but not registered.
 
 ### Changed

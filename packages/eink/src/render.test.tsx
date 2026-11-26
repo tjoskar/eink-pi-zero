@@ -1,8 +1,9 @@
 import { test, expect, beforeAll, vi } from "vitest";
-import { Canvas, render, registerFont, fontPath } from "./mod.ts";
+import { Canvas, render, registerFont, registerIconFont, fontPath, Icon } from "./mod.ts";
 
 beforeAll(() => {
   registerFont(fontPath("noto-sans-regular.ttf"), "Noto Sans");
+  registerIconFont();
 });
 
 /** Columns (x) in row y that are darker than mid-grey. */
@@ -102,4 +103,18 @@ test("an unknown font family is warned about once", async () => {
   const fontWarnings = warn.mock.calls.filter((args) => String(args[0]).includes("No Such Font"));
   expect(fontWarnings).toHaveLength(1);
   warn.mockRestore();
+});
+
+test("text exactly as wide as its box is drawn whole, not cut over a sub-pixel", async () => {
+  // Material Icons glyphs measure a hair wider than the 24 px box the Icon gets.
+  const canvas = new Canvas(40, 40);
+  await render(
+    <view direction="row" align="start">
+      <Icon name="home" />
+    </view>,
+    canvas,
+  );
+
+  // The house's roof has ink in the top part of the box; an ellipsis would not.
+  expect(hasInk(canvas, 0, 0, 24, 10)).toBe(true);
 });

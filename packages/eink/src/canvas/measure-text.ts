@@ -34,10 +34,17 @@ export function measureTextWidth(text: string, font: string, family: string): nu
 }
 
 /**
+ * Overflow ignored when fitting text. Glyphs often measure a hair wider than
+ * their nominal size (an icon at 24 px measures 24.0001), which must not cut them.
+ */
+const SUBPIXEL_SLACK = 0.5;
+
+/**
  * `text` shortened with a trailing "…" so it fits in `maxWidth`, unchanged if
  * it already fits, or empty if not even "…" fits.
  */
 export function fitText(text: string, maxWidth: number, font: string, family: string): string {
+  maxWidth += SUBPIXEL_SLACK;
   if (measureTextWidth(text, font, family) <= maxWidth) return text;
   if (measureTextWidth("…", font, family) > maxWidth) return "";
 
