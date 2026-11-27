@@ -10,7 +10,7 @@
  * - BUSY is polled every 5 ms instead of in a tight loop, with a timeout.
  */
 import { clock } from "../clock.ts";
-import { LineRequest } from "./gpio.ts";
+import { LineRequest, LinesBusyError } from "./gpio.ts";
 import { MAX_TRANSFER, Spi } from "./spi.ts";
 
 export const WIDTH = 800;
@@ -23,10 +23,23 @@ const DC = 25;
 const PWR = 18;
 const BUSY = 24;
 /** Lines the panel and the SPI bus use. An app must never request them. */
-export const PANEL_PINS: ReadonlySet<number> = new Set([RST, DC, PWR, BUSY, 7, 8, 9, 10, 11]);
+const PANEL_PINS: ReadonlySet<number> = new Set([RST, DC, PWR, BUSY, 7, 8, 9, 10, 11]);
+
+/** For an LED or button: a header GPIO (0–27) that is not the panel's or SPI's. */
+export function assertAppPin(pin: number): void {
+  if (!Number.isInteger(pin) || pin < 0 || pin > 27 || PANEL_PINS.has(pin)) {
+    throw new Error(`GPIO ${pin} cannot be used: the panel and SPI use ${[...PANEL_PINS]}`);
+  }
+}
 
 const BUSY_POLL_MS = 5;
 const BUSY_TIMEOUT_MS = 30_000;
+
+function panelBusy(err: unknown): unknown {
+  return err instanceof LinesBusyError
+    ? new Error("GPIO lines busy: another app owns the panel", { cause: err })
+    : err;
+}
 
 export type InitMode = "normal" | "fast" | "gray4";
 
@@ -36,13 +49,17 @@ export class Epd {
   #spi: Spi | null = null;
 
   constructor() {
-    // BUSY is driven by the panel: input only, never output.
-    this.#busy = new LineRequest([BUSY], { direction: "input", bias: "pull-down" });
+    try {
+      // BUSY is driven by the panel: input only, never output.
+      this.#busy = new LineRequest([BUSY], { direction: "input", bias: "pull-down" });
+    } catch (err) {
+      throw panelBusy(err);
+    }
     try {
       this.#out = new LineRequest([RST, DC, PWR], { direction: "output" });
     } catch (err) {
       this.#busy.release();
-      throw err;
+      throw panelBusy(err);
     }
   }
 

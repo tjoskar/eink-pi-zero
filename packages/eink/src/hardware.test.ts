@@ -7,6 +7,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { PNG } from "pngjs";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { GPIO_V2_LINE_FLAG_INPUT, GPIO_V2_LINE_FLAG_OUTPUT } from "./driver/abi.ts";
 import { kernel, type Op } from "./driver/syscalls.fake.ts";
 import {
   initHardware,
@@ -176,6 +177,9 @@ test.each([
   ["mono-normal", "mono.png", { fast: false }],
   ["mono-fast", "mono.png", { fast: true }],
   ["gray4", "gray4.png", { mode: "gray4" }],
+  // The gray4 fixture holds only the four exact levels (0, 85, 170, 255). Other
+  // grays are deliberately mapped to the nearest level, where Python's driver
+  // truncates to the top two bits instead.
 ] as const)("%s is byte for byte what the Python driver sends", async (name, image, options) => {
   await init();
   kernel.log = [];
@@ -277,15 +281,15 @@ test("a signal mid-render waits for the current step, then sleeps the panel and 
   const appListener = vi.fn();
   process.on("SIGTERM", appListener);
   try {
-    const hw = await init();
+    await init();
     await setLed(LED, true);
     kernel.busyAfter.set(0x04, 500); // power on takes a while
     const render = renderToDisplay(WHITE, { clear: true });
     render.catch(() => {});
     await runUntil(() => kernel.log.some((op) => op.op === "get" && op.line === BUSY));
 
-    process.emit("SIGTERM");
-    await run(hw.cleanup());
+    process.emit("SIGTERM"); // cleanup is up to the hardware's own handler
+    await runUntil(() => kernel.requested.size === 0);
 
     await expect(render).rejects.toThrow(/render stopped/);
     // Init ran to its end, no refresh started, then deep sleep. Never interleaved.
@@ -342,6 +346,29 @@ test("on process exit mid-render, power, RST, DC and LEDs go low at once", async
   expect(kernel.requested.size).toBe(0);
 });
 
+test("BUSY is only ever requested as an input", async () => {
+  await init();
+  await run(renderToDisplay(WHITE));
+  const requests = kernel.log.filter((op) => op.op === "request" && op.lines.includes(BUSY));
+  expect(requests).toHaveLength(1);
+  for (const op of requests) {
+    if (op.op !== "request") continue;
+    expect(op.flags & GPIO_V2_LINE_FLAG_INPUT).toBe(GPIO_V2_LINE_FLAG_INPUT);
+    expect(op.flags & GPIO_V2_LINE_FLAG_OUTPUT).toBe(0n);
+  }
+});
+
+test("a render that fails while powering on still ends with the power off", async () => {
+  await init();
+  kernel.spiIgnoresConfig = true;
+  await expect(run(renderToDisplay(WHITE))).rejects.toThrow(/SPI config did not stick/);
+  expect(lineTimes(PWR, 1)).toHaveLength(1);
+  expect([kernel.levels.get(PWR), kernel.levels.get(RST), kernel.levels.get(DC)]).toEqual([
+    0, 0, 0,
+  ]);
+  expect(kernel.log.some((op) => op.op === "spi")).toBe(false); // nothing sent to the panel
+});
+
 test("lines held by another app: a clear error, and nothing is left requested", async () => {
   kernel.heldByOthers.add(PWR);
   await expect(initHardware()).rejects.toThrow("GPIO lines busy: another app owns the panel");
@@ -353,6 +380,14 @@ test("the hardware must be initialized first", async () => {
 });
 
 // --- Refresh guard ---
+
+test("a render asked for as soon as the previous one resolves is drawn too", async () => {
+  await init();
+  await run(
+    renderToDisplay(WHITE, { fast: true }).then(() => renderToDisplay(BLACK, { fast: true })),
+  );
+  expect(lineTimes(PWR, 1)).toHaveLength(2);
+});
 
 test("a render that comes too soon waits, and only the latest waiting frame is drawn", async () => {
   await init();

@@ -17,6 +17,10 @@ ExecStopPost=/usr/bin/node node_modules/@tjoskar/eink/dist/cleanup.js 13
 Environment=TZ=Europe/Stockholm NODE_ENV=production
 Restart=on-failure
 RestartSec=60
+# Stopping waits for a running render's step and the panel's deep sleep:
+# at most about a minute, with two BUSY timeouts. Then SIGKILL, and
+# ExecStopPost cuts the power without deep sleep.
+TimeoutStopSec=120
 # 75: the Framework stopped a render loop. Stay down until restarted by hand.
 RestartPreventExitStatus=75
 

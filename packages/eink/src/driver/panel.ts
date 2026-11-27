@@ -3,7 +3,7 @@
  * chardevs. `hardware.ts` decides when to render; this only knows how.
  */
 import { assertExpectedChip, LineRequest } from "./gpio.ts";
-import { Epd, PANEL_PINS } from "./epd.ts";
+import { assertAppPin, Epd } from "./epd.ts";
 import { toGray4Planes, toMonoFrame } from "./image.ts";
 
 export interface Frame {
@@ -17,9 +17,11 @@ const LED_BLINK_MS = 500;
 const BUTTON_POLL_MS = 20;
 const BUTTON_DEBOUNCE_US = 50_000;
 
-function assertAppPin(pin: number): void {
-  if (!Number.isInteger(pin) || pin < 0 || pin > 27 || PANEL_PINS.has(pin)) {
-    throw new Error(`GPIO ${pin} cannot be used: the panel and SPI use ${[...PANEL_PINS]}`);
+function tryRelease(line: LineRequest): void {
+  try {
+    line.release();
+  } catch (err) {
+    console.error("[hardware] Could not release a GPIO line:", err);
   }
 }
 
@@ -103,17 +105,19 @@ export class Panel {
    * process's `exit` event): panel power, RST, DC and LEDs low, lines released.
    */
   release(): void {
+    // Panel power first, so nothing below can keep it on.
+    this.#epd.powerOff();
     for (const [pin, led] of this.#leds) {
       clearInterval(led.blink);
       try {
         led.line.set(pin, 0);
       } catch {}
-      led.line.release();
+      tryRelease(led.line);
     }
     this.#leds.clear();
     for (const button of this.#buttons.values()) {
       clearInterval(button.poll);
-      button.line.release();
+      tryRelease(button.line);
     }
     this.#buttons.clear();
     this.#epd.release();

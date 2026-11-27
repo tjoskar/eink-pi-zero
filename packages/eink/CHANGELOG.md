@@ -19,5 +19,6 @@ All notable changes to `@tjoskar/eink` are documented here. The format is based 
 - **Breaking:** the handle from `initHardware()` is async: use `await using`, and `cleanup()` returns a promise. It waits for a running render to finish its current step and put the panel into deep sleep.
 - `initHardware()` fails with "GPIO lines busy: another app owns the panel" if another process holds the panel's lines, and cleans up on SIGINT, SIGTERM and SIGHUP by itself.
 - LED and button pins can be any GPIO except the panel's and SPI's.
+- Images must be 800x480; the Python daemon also rotated 480x800 images.
 
 - The `fetch-example-openweather` Example drops its hard-coded text widths; its snapshot is updated (the big temperature no longer overflows its box, forecast columns grow to fit their text).

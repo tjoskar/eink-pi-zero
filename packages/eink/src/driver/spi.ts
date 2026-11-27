@@ -17,8 +17,13 @@ export class Spi {
   readonly #xfer = Buffer.alloc(abi.SPI_IOC_TRANSFER_SIZE);
 
   constructor() {
-    this.#fd = sys.open(DEVICE, "r+");
     this.#tx = sys.allocNative(MAX_TRANSFER);
+    try {
+      this.#fd = sys.open(DEVICE, "r+");
+    } catch (err) {
+      this.#tx.free();
+      throw err;
+    }
     try {
       sys.ioctl(this.#fd, abi.SPI_IOC_WR_MODE, Buffer.of(MODE));
       sys.ioctl(this.#fd, abi.SPI_IOC_WR_BITS_PER_WORD, Buffer.of(BITS));
@@ -62,7 +67,10 @@ export class Spi {
   }
 
   close(): void {
-    sys.close(this.#fd);
-    this.#tx.free();
+    try {
+      sys.close(this.#fd);
+    } finally {
+      this.#tx.free();
+    }
   }
 }

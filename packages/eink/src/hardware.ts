@@ -75,7 +75,9 @@ class Hardware {
 
   /** The latest frame not drawn yet, and everyone waiting for a frame. */
   #pending: { png: Uint8Array; options: RenderOptions; waiters: Waiter[] } | null = null;
-  #drawing: Promise<void> | null = null;
+  /** True while the draw loop runs; cleared synchronously when it ends. */
+  #isDrawing = false;
+  #drawing: Promise<void> = Promise.resolve();
   #renderCount = 0;
   #renderStarts: number[] = [];
   #lastRenderEnd = -Infinity;
@@ -110,45 +112,44 @@ class Hardware {
     return new Promise((resolve, reject) => {
       const waiters = [...(this.#pending?.waiters ?? []), { resolve, reject }];
       this.#pending = { png, options, waiters };
-      this.#drawing ??= this.#drawLoop().finally(() => (this.#drawing = null));
+      if (!this.#isDrawing) this.#drawing = this.#drawLoop();
     });
   }
 
   /** The one place renders start, so they never overlap. */
   async #drawLoop(): Promise<void> {
-    const { signal } = this.#stopping;
-    while (this.#pending && !signal.aborted) {
-      const wait = this.#msUntilAllowed();
-      if (wait === "loop") return this.#stopRenderLoop();
-      if (wait > 0) {
-        await clock.sleep(wait, signal);
-        continue; // a newer frame may have arrived meanwhile
-      }
+    this.#isDrawing = true;
+    try {
+      const { signal } = this.#stopping;
+      while (this.#pending && !signal.aborted) {
+        const wait = this.#msUntilAllowed();
+        if (wait === "loop") return this.#stopRenderLoop();
+        if (wait > 0) {
+          await clock.sleep(wait, signal);
+          continue; // a newer frame may have arrived meanwhile
+        }
 
-      const { png, options, waiters } = this.#pending;
-      this.#pending = null;
-      const frame = this.#frame(png, options);
-      this.#renderStarts.push(clock.now());
-      try {
-        await this.#panel.render(frame, () => {
-          if (signal.aborted) throw new Error("[hardware] render stopped: cleaning up");
-        });
-        const label =
-          frame.mode === "gray4"
-            ? "gray4"
-            : frame.clear
-              ? "clear + normal"
-              : frame.fast
-                ? "fast"
-                : "normal";
-        console.log(`[hardware] Render #${this.#renderCount} complete (${label})`);
-        this.#renderCount++;
-        for (const w of waiters) w.resolve();
-      } catch (err) {
-        for (const w of waiters) w.reject(err);
-      } finally {
-        this.#lastRenderEnd = clock.now();
+        const { png, options, waiters } = this.#pending;
+        this.#pending = null;
+        const frame = this.#frame(png, options);
+        this.#renderStarts.push(clock.now());
+        try {
+          await this.#panel.render(frame, () => {
+            if (signal.aborted) throw new Error("[hardware] render stopped: cleaning up");
+          });
+          console.log(`[hardware] Render #${this.#renderCount} complete (${describe(frame)})`);
+          this.#renderCount++;
+          for (const w of waiters) w.resolve();
+        } catch (err) {
+          for (const w of waiters) w.reject(err);
+        } finally {
+          this.#lastRenderEnd = clock.now();
+        }
       }
+    } finally {
+      // In the same tick as the loop's last check for a pending frame (not
+      // after an await), so a frame asked for right after always starts a new loop.
+      this.#isDrawing = false;
     }
   }
 
@@ -195,7 +196,6 @@ class Hardware {
       callbacks.push(callback);
       return;
     }
-    this.#buttonCallbacks.set(pin, [callback]);
     this.#panel.watchButton(pin, () => {
       console.log(`[hardware] Button event on pin ${pin}`);
       for (const cb of this.#buttonCallbacks.get(pin) ?? []) {
@@ -206,6 +206,8 @@ class Hardware {
         }
       }
     });
+    // Only once watching works, so a failed subscription can be retried.
+    this.#buttonCallbacks.set(pin, [callback]);
     console.log(`[hardware] Subscribed to button on pin ${pin}`);
   }
 
@@ -229,6 +231,12 @@ class Hardware {
     })();
     return this.#stopped;
   }
+}
+
+function describe(frame: Frame): string {
+  if (frame.mode === "gray4") return "gray4";
+  if (frame.clear) return "clear + normal";
+  return frame.fast ? "fast" : "normal";
 }
 
 let hardware: Hardware | null = null;

@@ -52,6 +52,8 @@ export const kernel = {
   busyAfter: new Map<number, number>(),
   busyUntil: 0,
   spi: { mode: 0, bits: 0, speedHz: 0 },
+  /** Simulate a spidev that ignores the mode/bits/speed we set. */
+  spiIgnoresConfig: false,
   files: new Map<number, File>(),
   memory: new Map<bigint, Uint8Array>(),
   nextFd: 10,
@@ -64,6 +66,7 @@ export const kernel = {
     this.busyAfter.clear();
     this.busyUntil = 0;
     this.spi = { mode: 0, bits: 0, speedHz: 0 };
+    this.spiIgnoresConfig = false;
     this.files.clear();
     this.memory.clear();
   },
@@ -164,9 +167,15 @@ function lineIoctl(file: Extract<File, { kind: "line" }>, request: number, arg: 
     let out = 0n;
     file.lines.forEach((line, i) => {
       if (!((mask >> BigInt(i)) & 1n)) return;
-      // BUSY is low (0) while the panel works; a button idles high (pull-up).
-      const value =
-        line === BUSY_LINE ? (now() >= kernel.busyUntil ? 1 : 0) : (kernel.levels.get(line) ?? 1);
+      // An output reads back its own level. As an input, BUSY is low (0)
+      // while the panel works, and a button idles high (pull-up).
+      const value = file.output
+        ? (kernel.levels.get(line) ?? 0)
+        : line === BUSY_LINE
+          ? now() >= kernel.busyUntil
+            ? 1
+            : 0
+          : 1;
       if (value) out |= 1n << BigInt(i);
       kernel.log.push({ t: now(), op: "get", line });
     });
@@ -189,7 +198,7 @@ function spiIoctl(request: number, arg: Buffer): void {
       kernel.log.push({ t: now(), op: "spi-config", ...kernel.spi });
       break;
     case abi.SPI_IOC_RD_MODE:
-      arg[0] = kernel.spi.mode;
+      arg[0] = kernel.spiIgnoresConfig ? 3 : kernel.spi.mode;
       break;
     case abi.SPI_IOC_RD_BITS_PER_WORD:
       arg[0] = kernel.spi.bits;

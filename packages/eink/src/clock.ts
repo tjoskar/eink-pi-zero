@@ -1,9 +1,13 @@
 /**
  * Time, in one place. Tests drive it with fake timers (`vi.useFakeTimers`),
- * which replace both `Date.now` and `setTimeout`.
+ * which replace both `performance.now` and `setTimeout`.
  */
 export const clock = {
-  now: (): number => Date.now(),
+  /**
+   * Monotonic ms. Not Date.now: a Pi has no RTC, and NTP steps the wall
+   * clock right after boot, which would break timeouts and the refresh guard.
+   */
+  now: (): number => performance.now(),
 
   /** Wait `ms`, or less if `signal` aborts first (it never rejects). */
   sleep(ms: number, signal?: AbortSignal): Promise<void> {

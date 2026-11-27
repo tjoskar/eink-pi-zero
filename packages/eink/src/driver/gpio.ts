@@ -22,6 +22,16 @@ export function assertExpectedChip(): void {
   }
 }
 
+/** Another process (or this one, elsewhere) already holds one of the lines. */
+export class LinesBusyError extends Error {
+  constructor(offsets: number[], options: ErrorOptions) {
+    super(
+      `GPIO ${offsets.join(", ")} busy: already in use by another process or this one`,
+      options,
+    );
+  }
+}
+
 export type LineConfig =
   | { direction: "output" }
   | { direction: "input"; bias: "pull-up" | "pull-down"; fallingEdge?: { debounceUs: number } };
@@ -83,17 +93,21 @@ export class LineRequest {
       sys.ioctl(chip, abi.GPIO_V2_GET_LINE_IOCTL, req);
     } catch (err) {
       if (err instanceof sys.SyscallError && err.errno === abi.EBUSY) {
-        throw new Error(
-          `GPIO lines busy: another app owns the panel (GPIO ${offsets.join(", ")})`,
-          { cause: err },
-        );
+        throw new LinesBusyError(offsets, { cause: err });
       }
       throw err;
     } finally {
       sys.close(chip);
     }
     this.#fd = req.readInt32LE(abi.LINE_REQUEST_FD_OFFSET);
-    if (config.direction === "input" && config.fallingEdge) sys.setNonBlocking(this.#fd);
+    if (config.direction === "input" && config.fallingEdge) {
+      try {
+        sys.setNonBlocking(this.#fd);
+      } catch (err) {
+        sys.close(this.#fd);
+        throw err;
+      }
+    }
   }
 
   #bit(offset: number): bigint {
