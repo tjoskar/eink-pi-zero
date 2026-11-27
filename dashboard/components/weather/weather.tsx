@@ -32,7 +32,7 @@ function CurrentWeather({ data }: { data: WeatherDisplayData["current"] }) {
       {/* Big icon + temp */}
       <view direction="row" gap={16} align="center">
         <Icon name={data.icon} size={108} color="black" />
-        <view width={80}>
+        <view minWidth={80}>
           <text size={64} color="black">
             {data.temp}
           </text>
