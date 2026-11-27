@@ -68,8 +68,8 @@ function handleButtonPress(): void {
  * Main entry point.
  */
 async function main(): Promise<void> {
-  // Start hardware daemon
-  using _hardware = await initHardware();
+  // Take the panel, button and LED
+  await using _hardware = await initHardware();
 
   // Set up button handler
   await onButtonPress(BUTTON_PIN, handleButtonPress);

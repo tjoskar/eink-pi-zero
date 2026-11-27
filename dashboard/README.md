@@ -26,8 +26,8 @@ sudo apt install -y nodejs
 # SPI for the panel
 sudo raspi-config nonint do_spi 0
 
-# The Framework's Python hardware daemon (until it is replaced by Node)
-sudo apt install -y python3-pil python3-spidev python3-gpiozero gpiod
+# Access to the GPIO and SPI devices (gpiod is only for debugging: gpioinfo)
+sudo apt install -y gpiod
 sudo usermod -aG gpio,spi "$USER"
 
 # Start the user unit at boot without a login

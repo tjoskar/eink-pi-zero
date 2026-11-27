@@ -100,7 +100,7 @@ registerFont(fontPath("noto-sans-regular.ttf"), "Noto Sans");
 const canvas = Canvas.create(800, 480);
 await render(<App />, canvas);
 
-using _hardware = await initHardware();
+await using _hardware = await initHardware();
 await renderToDisplay(canvas.toPng());
 ```
 
@@ -142,7 +142,7 @@ draw.text((100, 100), "Hello World", font=font, fill=0)
 
 With TSX, components are declarative and composable. You don't think about absolute coordinates, you get full type safety, and you can write snapshot tests to catch visual regressions.
 
-The tradeoff: Python has much better GPIO and SPI support on the Pi. So the architecture is a hybrid — TypeScript handles all UI rendering, while a small Python daemon handles hardware (GPIO, buttons, LED, display) via JSON IPC. See [docs/architecture.md](./docs/architecture.md) for the full design rationale.
+The tradeoff used to be hardware access: Python has better GPIO and SPI libraries on the Pi, so for a while a small Python daemon drove the panel, button and LED. Now Node talks to the kernel's GPIO and SPI devices directly (ioctl calls through [Koffi](https://koffi.dev)), so the Pi only needs Node.
 
 ## Releasing `@tjoskar/eink`
 

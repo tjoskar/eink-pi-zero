@@ -27,7 +27,7 @@ async function main(): Promise<void> {
   const imageBuffer = await renderApp();
 
   console.log("Render to display");
-  using _hardware = await initHardware();
+  await using _hardware = await initHardware();
   await renderToDisplay(imageBuffer);
 }
 

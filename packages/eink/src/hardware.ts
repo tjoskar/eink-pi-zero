@@ -1,461 +1,333 @@
 /**
- * Hardware utilities for buttons, LED, and e-ink display via Python daemon.
+ * The panel, buttons and LEDs: what an app calls. On a Pi it drives the
+ * hardware directly (`driver/`); in mock mode (MOCK=1) a render writes
+ * preview.png and the 'b' key presses every button.
  *
- * Uses a persistent Python process (hardware_daemon.py) for all hardware I/O
- * via stdin/stdout JSON IPC. This provides:
- * - Unified hardware control (GPIO + display)
- * - No process spawn/kill per operation
- * - Lazy e-ink initialization
- *
- * In mock mode: simulates button presses via keyboard 'b' key, logs display renders.
+ * Every render is a full refresh that ends with the panel in deep sleep and
+ * its power off. Renders never overlap, and a refresh guard keeps a buggy
+ * app from wearing out the panel (see `RefreshLimits`).
  */
-
-import { spawn, ChildProcess } from "node:child_process";
 import { writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
-import { createInterface, Interface } from "node:readline";
+import { clock } from "./clock.ts";
 import { IS_MOCK } from "./env.ts";
-import { PYTHON_DIR } from "./assets/paths.ts";
-
-/** Timeout for GPIO commands (ms) */
-const GPIO_COMMAND_TIMEOUT_MS = 5_000;
-
-/** Timeout for render commands (ms) */
-const RENDER_COMMAND_TIMEOUT_MS = 30_000;
-
-/** How often (in render count) to use normal init instead of fast */
-const NORMAL_INIT_INTERVAL = 6;
-
-/** Path to the Python hardware daemon script */
-const HARDWARE_DAEMON_SCRIPT = join(PYTHON_DIR, "hardware_daemon.py");
+import type { Frame, Panel } from "./driver/panel.ts";
 
 /** Button press callback type */
 export type ButtonCallback = () => void;
 
 /** Render options */
 export interface RenderOptions {
+  /** `mono` (default): 1-bit. `gray4`: four gray levels, always a full init; `fast` and `clear` are ignored. */
+  mode?: "mono" | "gray4";
   /** Use fast init mode (faster refresh, less clean) */
   fast?: boolean;
   /** Clear display before rendering */
   clear?: boolean;
 }
 
-/** Hardware daemon process */
-let daemonProcess: ChildProcess | null = null;
-
-/** Readline interface for reading daemon stdout */
-let daemonReader: Interface | null = null;
-
-/** Registered button callbacks by pin */
-const buttonCallbacks = new Map<number, ButtonCallback[]>();
-
-/** Pending command responses */
-const pendingCommands = new Map<
-  string,
-  {
-    resolve: () => void;
-    reject: (err: Error) => void;
-    timeoutId: NodeJS.Timeout;
-  }
->();
-
-/** Promise that resolves when daemon is ready */
-let daemonReadyPromise: Promise<void> | null = null;
-let daemonReadyResolve: (() => void) | null = null;
-
-/** Render counter for automatic init-mode cycling */
-let renderCount = 0;
-
 /**
- * Send a command to the daemon.
+ * How often the panel may refresh. A render that comes too soon waits; if
+ * several wait, only the latest frame is drawn. Reaching `perHour` means the
+ * app is stuck in a render loop: the process logs an error, cleans up and
+ * exits with `REFRESH_LOOP_EXIT_CODE`, which the systemd unit does not restart.
  */
-function sendCommand(cmd: Record<string, unknown>): void {
-  if (!daemonProcess?.stdin) {
-    throw new Error("Hardware daemon not running");
-  }
-  const line = JSON.stringify(cmd) + "\n";
-  daemonProcess.stdin.write(line);
+export interface RefreshLimits {
+  /** From the end of one render to the start of the next (ms). */
+  minGapMs: number;
+  perMinute: number;
+  perHour: number;
 }
 
-/**
- * Send a command and wait for response.
- */
-async function sendCommandWithResponse(
-  cmd: Record<string, unknown>,
-  timeoutMs: number = GPIO_COMMAND_TIMEOUT_MS,
-): Promise<void> {
-  const cmdType = cmd.cmd as string;
+export const DEFAULT_REFRESH_LIMITS: RefreshLimits = { minGapMs: 2000, perMinute: 3, perHour: 20 };
 
-  return new Promise((resolve, reject) => {
-    const timeoutId = setTimeout(() => {
-      pendingCommands.delete(cmdType);
-      reject(new Error(`Hardware command timeout: ${cmdType}`));
-    }, timeoutMs);
+/** Exit code after a render loop (EX_TEMPFAIL). The unit sets RestartPreventExitStatus=75. */
+export const REFRESH_LOOP_EXIT_CODE = 75;
 
-    pendingCommands.set(cmdType, {
-      resolve: () => {
-        clearTimeout(timeoutId);
-        resolve();
-      },
-      reject: (err) => {
-        clearTimeout(timeoutId);
-        reject(err);
-      },
-      timeoutId,
+export interface HardwareOptions {
+  /** Override some of `DEFAULT_REFRESH_LIMITS`. */
+  refreshLimits?: Partial<RefreshLimits>;
+}
+
+/** Returned by `initHardware`. Use with `await using`. */
+export interface HardwareHandle extends AsyncDisposable {
+  /** Same as disposing: waits for a running render's deep sleep, then releases everything. */
+  cleanup(): Promise<void>;
+}
+
+type PanelApi = Pick<Panel, "render" | "setLed" | "watchButton" | "release">;
+
+/** How often to use normal init instead of fast, counted in renders. */
+const NORMAL_INIT_INTERVAL = 6;
+const HOUR_MS = 3_600_000;
+const MINUTE_MS = 60_000;
+const SIGNALS = ["SIGINT", "SIGTERM", "SIGHUP"] as const;
+
+interface Waiter {
+  resolve(): void;
+  reject(err: unknown): void;
+}
+
+class Hardware {
+  readonly #panel: PanelApi;
+  readonly #limits: RefreshLimits;
+  readonly #stopping = new AbortController();
+  #stopped: Promise<void> | null = null;
+
+  /** The latest frame not drawn yet, and everyone waiting for a frame. */
+  #pending: { png: Uint8Array; options: RenderOptions; waiters: Waiter[] } | null = null;
+  #drawing: Promise<void> | null = null;
+  #renderCount = 0;
+  #renderStarts: number[] = [];
+  #lastRenderEnd = -Infinity;
+
+  readonly #buttonCallbacks = new Map<number, ButtonCallback[]>();
+  readonly #signalHandlers = new Map<NodeJS.Signals, () => void>();
+  readonly #onExit = () => this.#panel.release();
+
+  constructor(panel: PanelApi, limits: RefreshLimits) {
+    this.#panel = panel;
+    this.#limits = limits;
+    // Last resort on any exit (also an uncaught error): drop power, no deep sleep.
+    process.on("exit", this.#onExit);
+    for (const signal of SIGNALS) {
+      const handler = () => {
+        // Prepended, so app listeners have not run yet and are still counted.
+        const appHandlesSignal = process.listenerCount(signal) > 1;
+        void this.stop().then(() => {
+          // Nobody else handles it: re-raise now that our handler is gone.
+          if (!appHandlesSignal) process.kill(process.pid, signal);
+        });
+      };
+      this.#signalHandlers.set(signal, handler);
+      process.prependListener(signal, handler);
+    }
+  }
+
+  render(png: Uint8Array, options: RenderOptions): Promise<void> {
+    if (this.#stopping.signal.aborted) {
+      return Promise.reject(new Error("[hardware] already cleaned up"));
+    }
+    return new Promise((resolve, reject) => {
+      const waiters = [...(this.#pending?.waiters ?? []), { resolve, reject }];
+      this.#pending = { png, options, waiters };
+      this.#drawing ??= this.#drawLoop().finally(() => (this.#drawing = null));
     });
+  }
 
-    sendCommand(cmd);
-  });
-}
+  /** The one place renders start, so they never overlap. */
+  async #drawLoop(): Promise<void> {
+    const { signal } = this.#stopping;
+    while (this.#pending && !signal.aborted) {
+      const wait = this.#msUntilAllowed();
+      if (wait === "loop") return this.#stopRenderLoop();
+      if (wait > 0) {
+        await clock.sleep(wait, signal);
+        continue; // a newer frame may have arrived meanwhile
+      }
 
-/**
- * Handle a message from the daemon.
- */
-function handleDaemonMessage(line: string): void {
-  try {
-    const msg = JSON.parse(line);
+      const { png, options, waiters } = this.#pending;
+      this.#pending = null;
+      const frame = this.#frame(png, options);
+      this.#renderStarts.push(clock.now());
+      try {
+        await this.#panel.render(frame, () => {
+          if (signal.aborted) throw new Error("[hardware] render stopped: cleaning up");
+        });
+        const label =
+          frame.mode === "gray4"
+            ? "gray4"
+            : frame.clear
+              ? "clear + normal"
+              : frame.fast
+                ? "fast"
+                : "normal";
+        console.log(`[hardware] Render #${this.#renderCount} complete (${label})`);
+        this.#renderCount++;
+        for (const w of waiters) w.resolve();
+      } catch (err) {
+        for (const w of waiters) w.reject(err);
+      } finally {
+        this.#lastRenderEnd = clock.now();
+      }
+    }
+  }
 
-    // Handle ready event
-    if (msg.event === "ready") {
-      console.log("[hardware] Daemon ready");
-      daemonReadyResolve?.();
+  #msUntilAllowed(): number | "loop" {
+    const now = clock.now();
+    this.#renderStarts = this.#renderStarts.filter((t) => t > now - HOUR_MS);
+    const { minGapMs, perMinute, perHour } = this.#limits;
+    if (this.#renderStarts.length >= perHour) return "loop";
+    let at = this.#lastRenderEnd + minGapMs;
+    const lastMinute = this.#renderStarts.filter((t) => t > now - MINUTE_MS);
+    if (lastMinute.length >= perMinute) {
+      at = Math.max(at, lastMinute[lastMinute.length - perMinute] + MINUTE_MS);
+    }
+    return Math.max(0, at - now);
+  }
+
+  #stopRenderLoop(): void {
+    const { perHour } = this.#limits;
+    console.error(
+      `[hardware] ${perHour} renders within an hour: the app looks stuck in a render loop. ` +
+        `Exiting with code ${REFRESH_LOOP_EXIT_CODE}; restart it by hand once fixed.`,
+    );
+    // Not awaited: stop() waits for this draw loop to finish.
+    void this.stop().finally(() => process.exit(REFRESH_LOOP_EXIT_CODE));
+  }
+
+  /** First render clears, then 5 fast and 1 normal, unless `options` says otherwise. */
+  #frame(png: Uint8Array, options: RenderOptions): Frame {
+    const mode = options.mode ?? "mono";
+    if (options.fast !== undefined || options.clear !== undefined) {
+      return { png, mode, fast: options.fast ?? false, clear: options.clear ?? false };
+    }
+    if (this.#renderCount === 0) return { png, mode, fast: false, clear: true };
+    return { png, mode, fast: this.#renderCount % NORMAL_INIT_INTERVAL !== 0, clear: false };
+  }
+
+  setLed(pin: number, state: boolean | "blink"): void {
+    this.#panel.setLed(pin, state);
+  }
+
+  onButtonPress(pin: number, callback: ButtonCallback): void {
+    const callbacks = this.#buttonCallbacks.get(pin);
+    if (callbacks) {
+      callbacks.push(callback);
       return;
     }
-
-    // Handle button event
-    if (msg.event === "button") {
-      const pin = msg.pin as number;
-      const callbacks = buttonCallbacks.get(pin);
-      if (callbacks) {
-        console.log(`[hardware] Button event on pin ${pin}`);
-        for (const cb of callbacks) {
-          try {
-            cb();
-          } catch (err) {
-            console.error("[hardware] Button callback error:", err);
-          }
+    this.#buttonCallbacks.set(pin, [callback]);
+    this.#panel.watchButton(pin, () => {
+      console.log(`[hardware] Button event on pin ${pin}`);
+      for (const cb of this.#buttonCallbacks.get(pin) ?? []) {
+        try {
+          cb();
+        } catch (err) {
+          console.error("[hardware] Button callback error:", err);
         }
       }
-      return;
-    }
+    });
+    console.log(`[hardware] Subscribed to button on pin ${pin}`);
+  }
 
-    // Handle command response
-    if (msg.response === "ok") {
-      const cmd = msg.cmd as string;
-      const pending = pendingCommands.get(cmd);
-      if (pending) {
-        pendingCommands.delete(cmd);
-        pending.resolve();
-      }
-      return;
-    }
-
-    // Handle error
-    if (msg.error) {
-      console.error("[hardware] Daemon error:", msg.error);
-      // Reject any pending command (we don't know which one failed)
-      for (const [cmd, pending] of pendingCommands) {
-        pendingCommands.delete(cmd);
-        pending.reject(new Error(msg.error));
-      }
-      return;
-    }
-  } catch (err) {
-    console.error("[hardware] Failed to parse daemon message:", line, err);
+  /**
+   * Stop rendering and release everything. A running render finishes its
+   * current step, then its own deep sleep, before anything is released.
+   */
+  stop(): Promise<void> {
+    this.#stopped ??= (async () => {
+      console.log("[hardware] Cleaning up...");
+      this.#stopping.abort();
+      const notDrawn = this.#pending?.waiters ?? [];
+      this.#pending = null;
+      for (const w of notDrawn)
+        w.reject(new Error("[hardware] cleaned up before the frame was drawn"));
+      await this.#drawing;
+      this.#panel.release();
+      process.off("exit", this.#onExit);
+      for (const [signal, handler] of this.#signalHandlers) process.off(signal, handler);
+      if (hardware === this) hardware = null;
+    })();
+    return this.#stopped;
   }
 }
 
+let hardware: Hardware | null = null;
+
+function current(): Hardware {
+  if (!hardware) throw new Error("[hardware] call initHardware() first");
+  return hardware;
+}
+
 /**
- * Start the hardware daemon process.
+ * Take the panel, buttons and LEDs. Fails if another process holds the GPIO
+ * lines. Cleans up on SIGINT, SIGTERM and SIGHUP too (and re-raises the
+ * signal if the app does not handle it).
  *
- * Must be called before using any hardware functions (except in mock mode).
+ * ```ts
+ * await using hardware = await initHardware();
+ * ```
  */
-async function startHardwareDaemon(): Promise<void> {
+export async function initHardware(options: HardwareOptions = {}): Promise<HardwareHandle> {
+  if (hardware) throw new Error("[hardware] initHardware() was already called");
+  const limits = { ...DEFAULT_REFRESH_LIMITS, ...options.refreshLimits };
+  let panel: PanelApi;
   if (IS_MOCK) {
-    console.log("[hardware] Mock mode - daemon not started");
-    setupMockButton();
-    return;
+    panel = createMockPanel();
+  } else {
+    // Imported lazily, so mock mode never loads the FFI bridge.
+    const { Panel } = await import("./driver/panel.ts");
+    panel = new Panel();
   }
-
-  if (daemonProcess) {
-    console.log("[hardware] Daemon already running");
-    return;
-  }
-
-  // Create ready promise
-  daemonReadyPromise = new Promise((resolve) => {
-    daemonReadyResolve = resolve;
-  });
-
-  console.log(`[hardware] Starting daemon: python3 ${HARDWARE_DAEMON_SCRIPT}`);
-
-  daemonProcess = spawn("python3", [HARDWARE_DAEMON_SCRIPT], {
-    stdio: ["pipe", "pipe", "pipe"],
-  });
-
-  // Set up readline for stdout
-  daemonReader = createInterface({
-    input: daemonProcess.stdout!,
-    crlfDelay: Infinity,
-  });
-
-  daemonReader.on("line", handleDaemonMessage);
-
-  // Log stderr
-  daemonProcess.stderr?.on("data", (data: Buffer) => {
-    console.error(`[hardware] Daemon stderr: ${data.toString().trim()}`);
-  });
-
-  daemonProcess.on("error", (err) => {
-    console.error(`[hardware] Failed to start daemon: ${err.message}`);
-    daemonProcess = null;
-  });
-
-  daemonProcess.on("close", (code) => {
-    console.log(`[hardware] Daemon exited with code ${code}`);
-    daemonProcess = null;
-    daemonReader = null;
-  });
-
-  // Wait for ready event
-  await Promise.race([
-    daemonReadyPromise,
-    new Promise<void>((_, reject) =>
-      setTimeout(() => reject(new Error("Hardware daemon startup timeout")), 5000),
-    ),
-  ]);
+  const hw = new Hardware(panel, limits);
+  hardware = hw;
+  console.log("[hardware] Ready");
+  return { cleanup: () => hw.stop(), [Symbol.asyncDispose]: () => hw.stop() };
 }
 
 /**
- * Set up keyboard listener for mock button.
+ * Render a PNG (800x480) to the panel. Resolves once this frame, or a newer
+ * one that replaced it while waiting, has been drawn.
  */
-function setupMockButton(): void {
-  if (process.stdin.isTTY) {
-    process.stdin.setRawMode(true);
+export function renderToDisplay(
+  imageBuffer: Uint8Array,
+  options: RenderOptions = {},
+): Promise<void> {
+  try {
+    return current().render(imageBuffer, options);
+  } catch (err) {
+    return Promise.reject(err);
   }
-  process.stdin.resume();
-  process.stdin.setEncoding("utf8");
+}
 
-  process.stdin.on("data", (key: string) => {
-    // Ctrl+C — restore terminal and emit SIGINT locally so the normal
-    // signal handling (Promise.race + using) takes over and runs full
-    // cleanup. We use process.emit() instead of process.kill(0, ...) to
-    // avoid signaling the parent (tsx --watch) before cleanup completes.
-    // After cleanup, raw mode is off so a second Ctrl+C exits tsx normally.
+/** Call `callback` on every press of the button on `pin` (to ground; pull-up and debounce built in). */
+export async function onButtonPress(pin: number, callback: ButtonCallback): Promise<void> {
+  current().onButtonPress(pin, callback);
+}
+
+/** Set the LED on `pin`: on, off, or blink until the next call. */
+export async function setLed(pin: number, state: boolean | "blink"): Promise<void> {
+  current().setLed(pin, state);
+}
+
+function createMockPanel(): PanelApi {
+  const buttons: (() => void)[] = [];
+  const onKey = (key: string) => {
+    // Ctrl+C: restore the terminal and emit SIGINT locally, so the normal
+    // signal handling runs full cleanup (process.emit, not process.kill(0),
+    // so a parent like tsx --watch is not signalled before cleanup is done).
     if (key === "\u0003") {
-      if (process.stdin.isTTY) {
-        process.stdin.setRawMode(false);
-      }
+      if (process.stdin.isTTY) process.stdin.setRawMode(false);
       process.emit("SIGINT");
       return;
     }
-
-    // 'b' for button - trigger all registered callbacks
     if (key.toLowerCase() === "b") {
       console.log("[hardware] Mock button pressed (keyboard 'b')");
-      for (const callbacks of buttonCallbacks.values()) {
-        for (const cb of callbacks) {
-          try {
-            cb();
-          } catch (err) {
-            console.error("[hardware] Button callback error:", err);
-          }
-        }
-      }
+      for (const press of buttons) press();
     }
-  });
+  };
+  if (process.stdin.isTTY) process.stdin.setRawMode(true);
+  process.stdin.setEncoding("utf8");
+  process.stdin.on("data", onKey);
+  process.stdin.resume();
+  console.log("[hardware] Mock mode - press 'b' to simulate a button press");
 
-  console.log("[hardware] Mock button ready - press 'b' to simulate button press");
-}
-
-/**
- * Clean up hardware resources.
- */
-function cleanup(): void {
-  console.log("[hardware] Cleaning up resources...");
-  if (daemonProcess) {
-    console.log("[hardware] Stopping daemon");
-    try {
-      sendCommand({ cmd: "shutdown" });
-    } catch {
-      // Ignore errors when sending shutdown
-    }
-    // No need to force-kill: when this process exits, the daemon's
-    // stdin pipe closes → it sees EOF → breaks its loop → runs cleanup.
-    daemonProcess = null;
-  }
-
-  daemonReader?.close();
-  daemonReader = null;
-  buttonCallbacks.clear();
-
-  // Clear pending commands
-  for (const [, pending] of pendingCommands) {
-    clearTimeout(pending.timeoutId);
-  }
-  pendingCommands.clear();
-
-  // Reset render counter so next startup does a full clear
-  renderCount = 0;
-
-  // Restore terminal and release stdin in mock mode
-  if (IS_MOCK) {
-    if (process.stdin.isTTY) {
-      process.stdin.setRawMode(false);
-    }
-    process.stdin.pause();
-    process.stdin.removeAllListeners("data");
-  }
-}
-
-/**
- * Subscribe to button press events on a pin.
- *
- * @param pin - GPIO pin number
- * @param callback - Function to call when button is pressed
- */
-export async function onButtonPress(pin: number, callback: ButtonCallback): Promise<void> {
-  // Register callback
-  const existing = buttonCallbacks.get(pin) || [];
-  existing.push(callback);
-  buttonCallbacks.set(pin, existing);
-
-  // In mock mode, we're done (mock setup happens in startHardwareDaemon)
-  if (IS_MOCK) {
-    return;
-  }
-
-  // Subscribe to pin if this is the first callback for it
-  if (existing.length === 1) {
-    await sendCommandWithResponse({ cmd: "button_subscribe", pin });
-    console.log(`[hardware] Subscribed to button on pin ${pin}`);
-  }
-}
-
-/**
- * Set LED state.
- *
- * @param pin - GPIO pin number
- * @param state - true for on, false for off, "blink" to blink until the next call
- */
-export async function setLed(pin: number, state: boolean | "blink"): Promise<void> {
-  if (IS_MOCK) {
-    const label = state === "blink" ? "BLINK" : state ? "ON" : "OFF";
-    console.log(`[hardware] Mock LED pin ${pin}: ${label}`);
-    return;
-  }
-
-  await sendCommandWithResponse(
-    state === "blink" ? { cmd: "led", pin, blink: true } : { cmd: "led", pin, on: state },
-  );
-}
-
-/**
- * Render a PNG buffer to the e-ink display.
- *
- * @param imageBuffer - PNG image data as a Buffer
- * @param options - Render options (fast, clear)
- * @returns Promise that resolves when rendering is complete
- * @throws Error if rendering fails
- */
-export async function renderToDisplay(
-  imageBuffer: Buffer,
-  options: RenderOptions = {},
-): Promise<void> {
-  // Resolve render mode: first render clears, then cycle 5 fast / 1 normal
-  const { fast, clear } = resolveRenderOptions(options);
-  const mode = clear ? "clear + normal" : fast ? "fast" : "normal";
-
-  if (IS_MOCK) {
-    const imagePath = "preview.png";
-    await writeFile(imagePath, new Uint8Array(imageBuffer));
-    console.log(`[hardware] Mock render #${renderCount} (${mode}): ${imagePath}`);
-    renderCount++;
-    return;
-  }
-
-  // Write image to temp file for daemon
-  const imagePath = join(tmpdir(), "eink-latest.png");
-  await writeFile(imagePath, new Uint8Array(imageBuffer));
-
-  // Send render command to daemon
-  await sendCommandWithResponse(
-    {
-      cmd: "render",
-      path: imagePath,
-      fast,
-      clear,
-    },
-    RENDER_COMMAND_TIMEOUT_MS,
-  );
-
-  console.log(`[hardware] Render #${renderCount} complete (${mode})`);
-  renderCount++;
-}
-
-/**
- * Determine effective render options based on the render counter.
- *
- * - Render 0: clear + normal init (startup)
- * - Every (FAST_RENDERS_BEFORE_NORMAL + 1)th render after that: normal init
- * - Otherwise: fast init
- *
- * Explicit values in `options` override the automatic behaviour.
- */
-function resolveRenderOptions(options: RenderOptions): {
-  fast: boolean;
-  clear: boolean;
-} {
-  if (options.fast !== undefined || options.clear !== undefined) {
-    return { fast: options.fast ?? false, clear: options.clear ?? false };
-  }
-
-  if (renderCount === 0) {
-    return { fast: false, clear: true };
-  }
-
-  // After startup, cycle: 5 fast, 1 normal, 5 fast, 1 normal, ...
-  if (renderCount % NORMAL_INIT_INTERVAL === 0) {
-    return { fast: false, clear: false };
-  }
-
-  return { fast: true, clear: false };
-}
-
-/** Hardware daemon handle for use with `using` keyword */
-export interface HardwareHandle extends Disposable {
-  /** Manually clean up resources (same as letting handle go out of scope) */
-  cleanup: typeof cleanup;
-}
-
-/**
- * Start the hardware daemon and return a disposable handle.
- *
- * Use with `using` for automatic cleanup on scope exit:
- * ```ts
- * async function main() {
- *   using hardware = await initHardware();
- *   // ... app code ...
- * } // cleanup() called automatically when scope exits
- * ```
- *
- * Note: `using` does NOT handle SIGINT/SIGTERM - add signal handlers in entry point:
- * ```ts
- * async function main() {
- *   using hardware = await initHardware();
- *   await Promise.race([
- *     once(process, "SIGINT"),
- *     once(process, "SIGTERM"),
- *     once(process, "SIGHUP"),
- *   ]);
- * }
- * ```
- */
-export async function initHardware(): Promise<HardwareHandle> {
-  await startHardwareDaemon();
   return {
-    cleanup,
-    [Symbol.dispose]: cleanup,
+    async render(frame) {
+      await writeFile("preview.png", frame.png);
+      console.log(`[hardware] Mock render (${frame.mode}): preview.png`);
+    },
+    setLed(pin, state) {
+      console.log(
+        `[hardware] Mock LED pin ${pin}: ${state === "blink" ? "BLINK" : state ? "ON" : "OFF"}`,
+      );
+    },
+    watchButton(_pin, onPress) {
+      buttons.push(onPress);
+    },
+    release() {
+      if (process.stdin.isTTY) process.stdin.setRawMode(false);
+      process.stdin.off("data", onKey);
+      process.stdin.pause();
+    },
   };
 }

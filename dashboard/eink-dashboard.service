@@ -11,9 +11,14 @@ StartLimitBurst=5
 [Service]
 WorkingDirectory=%h/eink/dashboard
 ExecStart=/usr/bin/node --env-file=.env --enable-source-maps dist/main.js
+# Panel power, RST, DC and the LED (GPIO 13) low after any stop, also SIGKILL
+# or a crash, when the app's own cleanup could not run.
+ExecStopPost=/usr/bin/node node_modules/@tjoskar/eink/dist/cleanup.js 13
 Environment=TZ=Europe/Stockholm NODE_ENV=production
 Restart=on-failure
 RestartSec=60
+# 75: the Framework stopped a render loop. Stay down until restarted by hand.
+RestartPreventExitStatus=75
 
 [Install]
 WantedBy=default.target
