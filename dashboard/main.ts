@@ -15,6 +15,7 @@ import {
   ENGINE_HEATER_REQUEST_TOPIC,
 } from "./components/devices/devices.tsx";
 import { createEngineHeater } from "./components/devices/engine-heater.ts";
+import { READING_TOPICS, isReadingTopic, setReading } from "./readings.ts";
 import {
   setTheme,
   EINK_BW_THEME,
@@ -105,8 +106,16 @@ async function main(): Promise<void> {
   });
 
   await using mqtt = connectMqtt({
-    topics: [STATECHANGE_TOPICS],
-    onMessage(topic, value) {
+    topics: [STATECHANGE_TOPICS, READING_TOPICS],
+    onMessage(topic, payload) {
+      // A Reading shows at the next scheduled render, never triggers one.
+      if (isReadingTopic(topic)) {
+        setReading(topic, payload);
+        return false;
+      }
+
+      const value = payload.toLowerCase();
+      if (value !== "on" && value !== "off") return false;
       const on = value === "on";
 
       if (topic === ENGINE_HEATER_TOPIC) {

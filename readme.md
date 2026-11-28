@@ -156,3 +156,5 @@ The [release workflow](.github/workflows/release.yml) runs CI, checks that the t
 ## License
 
 MIT
+
+The Dashboard's weather comes from [SMHI open data](https://www.smhi.se/data/oppna-data) (CC BY 4.0) and its UV index from [Open-Meteo.com](https://open-meteo.com/) ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)).

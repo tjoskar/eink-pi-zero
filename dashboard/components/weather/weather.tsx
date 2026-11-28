@@ -1,8 +1,8 @@
 /**
- * Weather section — current conditions + 5-day forecast.
+ * Weather section — current conditions + 5-day Forecast.
  *
- * Mirrors the layout from fetch-example-openweather/app.tsx:
- * big icon (108px) + temp (64px font) + detail column, then forecast row.
+ * Big icon (108px) + temp (64px font) + detail column, then forecast row.
+ * Weather data from SMHI, UV index from Open-Meteo.com (both CC BY 4.0).
  */
 
 import { Icon } from "@tjoskar/eink";
@@ -44,7 +44,7 @@ function CurrentWeather({ data }: { data: WeatherDisplayData["current"] }) {
         <DetailRow icon={DETAIL_ICONS.wind} text={data.windSpeed} />
         <DetailRow icon={DETAIL_ICONS.sun} text={data.sunTimes} />
         <DetailRow icon={DETAIL_ICONS.rain} text={data.rain} />
-        <DetailRow icon={DETAIL_ICONS.uv} text={data.uvInfo} />
+        {data.uvInfo === null ? null : <DetailRow icon={DETAIL_ICONS.uv} text={data.uvInfo} />}
       </view>
     </view>
   );
