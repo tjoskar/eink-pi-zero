@@ -1,38 +1,44 @@
 /**
- * Maps OpenWeatherMap icon codes to Material Icon names.
+ * Maps SMHI weather symbol codes (Wsymb2, 1–27, `symbol_code` in the
+ * snow1g forecast) to Material Icon names.
  *
- * OpenWeatherMap codes: https://openweathermap.org/weather-conditions
- * Material Icons: https://fonts.google.com/icons
+ * Wsymb2 has no day/night variants, so the caller says whether it is night.
+ * Only icon names in the Framework's icon map render; snow and sleet share
+ * `severe_cold`.
  */
 
-const WEATHER_ICON_MAP: Record<string, string> = {
-  // Clear
-  "01d": "clear_day",
-  "01n": "clear_night",
-  // Partly cloudy
-  "02d": "partly_cloudy_day",
-  "02n": "partly_cloudy_night",
-  // Cloudy
-  "03d": "partly_cloudy_day",
-  "03n": "partly_cloudy_night",
-  "04d": "partly_cloudy_day",
-  "04n": "partly_cloudy_night",
-  // Rain
-  "09d": "rainy_heavy",
-  "09n": "rainy_heavy",
-  "10d": "rainy",
-  "10n": "rainy",
-  // Thunderstorm
-  "11d": "thunderstorm",
-  "11n": "thunderstorm",
-  // Snow
-  "13d": "severe_cold",
-  "13n": "severe_cold",
-  // Mist / fog
-  "50d": "blur_on",
-  "50n": "foggy",
+const WSYMB2_ICON: Record<number, { day: string; night: string }> = {
+  1: { day: "clear_day", night: "clear_night" }, // Clear sky
+  2: { day: "clear_day", night: "clear_night" }, // Nearly clear sky
+  3: { day: "partly_cloudy_day", night: "partly_cloudy_night" }, // Variable cloudiness
+  4: { day: "partly_cloudy_day", night: "partly_cloudy_night" }, // Halfclear sky
+  5: { day: "cloud", night: "cloud" }, // Cloudy sky
+  6: { day: "cloud", night: "cloud" }, // Overcast
+  7: { day: "foggy", night: "foggy" }, // Fog
+  8: { day: "rainy", night: "rainy" }, // Light rain showers
+  9: { day: "rainy", night: "rainy" }, // Moderate rain showers
+  10: { day: "rainy_heavy", night: "rainy_heavy" }, // Heavy rain showers
+  11: { day: "thunderstorm", night: "thunderstorm" }, // Thunderstorm
+  12: { day: "severe_cold", night: "severe_cold" }, // Light sleet showers
+  13: { day: "severe_cold", night: "severe_cold" }, // Moderate sleet showers
+  14: { day: "severe_cold", night: "severe_cold" }, // Heavy sleet showers
+  15: { day: "severe_cold", night: "severe_cold" }, // Light snow showers
+  16: { day: "severe_cold", night: "severe_cold" }, // Moderate snow showers
+  17: { day: "severe_cold", night: "severe_cold" }, // Heavy snow showers
+  18: { day: "rainy", night: "rainy" }, // Light rain
+  19: { day: "rainy", night: "rainy" }, // Moderate rain
+  20: { day: "rainy_heavy", night: "rainy_heavy" }, // Heavy rain
+  21: { day: "thunderstorm", night: "thunderstorm" }, // Thunder
+  22: { day: "severe_cold", night: "severe_cold" }, // Light sleet
+  23: { day: "severe_cold", night: "severe_cold" }, // Moderate sleet
+  24: { day: "severe_cold", night: "severe_cold" }, // Heavy sleet
+  25: { day: "severe_cold", night: "severe_cold" }, // Light snow
+  26: { day: "severe_cold", night: "severe_cold" }, // Moderate snow
+  27: { day: "severe_cold", night: "severe_cold" }, // Heavy snow
 };
 
-export function getWeatherIconName(code: string): string {
-  return WEATHER_ICON_MAP[code] ?? "cloud";
+export function getWeatherIconName(symbol: number | undefined, isNight: boolean): string {
+  const variant = symbol === undefined ? undefined : WSYMB2_ICON[symbol];
+  if (!variant) return "cloud";
+  return isNight ? variant.night : variant.day;
 }

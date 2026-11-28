@@ -9,7 +9,8 @@ import {
 } from "@tjoskar/eink";
 import type { RequestFn } from "@tjoskar/eink";
 import {
-  MOCK_OPENWEATHER_RESPONSE,
+  MOCK_SMHI_RESPONSE,
+  MOCK_OPEN_METEO_UV_RESPONSE,
   MOCK_TIBBER_RESPONSE,
   MOCK_DISHES_RESPONSE,
 } from "./__fixtures__/mock-api-responses.ts";
@@ -19,6 +20,7 @@ import { assertSnapshot } from "../test/snapshot-utils.ts";
 import { overrideConfig } from "./config.ts";
 import { renderApp } from "./app.tsx";
 import { devicesState } from "./components/devices/devices.tsx";
+import { OUTDOOR_TEMPERATURE_TOPIC, setReading } from "./readings.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SNAPSHOTS_DIR = join(__dirname, "__snapshots__");
@@ -52,8 +54,11 @@ const mockFetch: RequestFn = async (input, _init) => {
   const url =
     typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 
-  if (url.includes("openweathermap.org")) {
-    return Response.json(MOCK_OPENWEATHER_RESPONSE);
+  if (url.includes("smhi.se")) {
+    return Response.json(MOCK_SMHI_RESPONSE);
+  }
+  if (url.includes("open-meteo.com")) {
+    return Response.json(MOCK_OPEN_METEO_UV_RESPONSE);
   }
   if (url.includes("tibber.com")) {
     return Response.json(MOCK_TIBBER_RESPONSE);
@@ -68,7 +73,8 @@ const mockFetch: RequestFn = async (input, _init) => {
 beforeAll(() => {
   overrideConfig({
     tibberToken: "test-token",
-    weatherApiKey: "test-key",
+    weatherLat: "59.3293",
+    weatherLon: "18.0686",
     dishesApiUrl: "https://matsedel.example.com/api",
   });
   setTheme({ ...EINK_BW_THEME, defaultFont: "Noto Sans" });
@@ -95,6 +101,8 @@ test("home dashboard renders consistently", async () => {
       ["test/bike_charger", { label: "Bike Charger", icon: "electric_bike", on: false }],
     ]),
   );
+
+  setReading(OUTDOOR_TEMPERATURE_TOPIC, "4.2");
 
   const actualPng = await renderApp();
 

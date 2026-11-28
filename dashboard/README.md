@@ -2,6 +2,13 @@
 
 The author's own home display: weather, device status and household readings on a Waveshare 7.5" V2 panel driven by a Raspberry Pi Zero 2 W. It is a real consumer of the Framework, not teaching material; build your own rather than copying it as-is.
 
+## Data sources
+
+- Forecast: [SMHI open data](https://www.smhi.se/data/oppna-data), point forecast snow1g v1, CC BY 4.0. No API key.
+- UV index: [Open-Meteo.com](https://open-meteo.com/), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). No API key for non-commercial use.
+- Day boundaries ("rest of today", the five days) and sun times use the Pi's time zone, which must be Europe/Stockholm (the Raspberry Pi OS setting).
+- Current outdoor temperature: the `controlpanel/reading/outdoor_temperature` Reading from Home Assistant, a plain number; SMHI's temperature until it arrives.
+
 ## Wiring
 
 All pins are BCM GPIO numbers, with the physical header pin in brackets. Verified on the hardware.

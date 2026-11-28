@@ -1,5 +1,9 @@
 import { defineConfig } from "vitest/config";
 
+// The Dashboard's Pi runs in Swedish time; its day boundaries and sun times
+// depend on it. Pin it so tests behave the same on every machine and in CI.
+process.env.TZ = "Europe/Stockholm";
+
 export default defineConfig({
   // Resolve @tjoskar/eink to its TypeScript source, not the built dist/.
   ssr: { resolve: { conditions: ["source"] } },

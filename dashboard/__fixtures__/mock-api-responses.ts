@@ -4,35 +4,74 @@
  * Frozen test time: 2026-03-07 14:30:00 (Saturday)
  */
 
-const SAT_NOON = Math.floor(new Date(2026, 2, 7, 12, 0, 0).getTime() / 1000);
+/** Wsymb2 symbol per day from today (Sat): variable clouds, snow, clear, rain, variable, cloudy. */
+const DAY_SYMBOLS = [3, 25, 1, 18, 3, 5];
+/** Min/max temperature per day from today. */
+const DAY_TEMPS: Array<[number, number]> = [
+  [1, 5],
+  [0, 4],
+  [-1, 3],
+  [2, 7],
+  [1, 6],
+  [3, 8],
+];
 
-export const MOCK_OPENWEATHER_RESPONSE = {
-  lat: 59.33,
-  lon: 18.07,
-  current: {
-    dt: SAT_NOON + 9000, // ~14:30
-    temp: 4.2,
-    weather: [{ id: 802, main: "Clouds", description: "scattered clouds", icon: "03d" }],
-    wind_speed: 3.8,
-    sunrise: SAT_NOON - 6 * 3600 + 1080, // ~06:18
-    sunset: SAT_NOON + 5 * 3600 + 3900, // ~17:05
-    uvi: 1.5,
-  },
-  hourly: Array.from({ length: 24 }, (_, i) => ({
-    dt: SAT_NOON - 12 * 3600 + i * 3600,
-    temp: 2 + Math.sin(i / 4) * 3,
-    weather: [{ icon: "03d" }],
-    uvi: i >= 10 && i <= 14 ? 2.5 : 0.5,
-  })),
-  daily: [
-    // Today (Sat) + 5 forecast days
-    { dt: SAT_NOON, temp: { min: 1, max: 5 }, weather: [{ icon: "03d" }] },
-    { dt: SAT_NOON + 86400, temp: { min: 0, max: 4 }, weather: [{ icon: "13d" }] },
-    { dt: SAT_NOON + 86400 * 2, temp: { min: -1, max: 3 }, weather: [{ icon: "01d" }] },
-    { dt: SAT_NOON + 86400 * 3, temp: { min: 2, max: 7 }, weather: [{ icon: "10d" }] },
-    { dt: SAT_NOON + 86400 * 4, temp: { min: 1, max: 6 }, weather: [{ icon: "02d" }] },
-    { dt: SAT_NOON + 86400 * 5, temp: { min: 3, max: 8 }, weather: [{ icon: "04d" }] },
-  ],
+function smhiStep(start: Date, end: Date) {
+  const midnight = new Date(end);
+  midnight.setHours(0, 0, 0, 0);
+  const day = Math.round((midnight.getTime() - new Date(2026, 2, 7).getTime()) / 86_400_000);
+  const [min, max] = DAY_TEMPS[Math.min(day, DAY_TEMPS.length - 1)];
+  // Coldest at 04:00, warmest at 16:00.
+  const t = min + ((max - min) * (1 - Math.cos(((end.getHours() - 4) * Math.PI) / 12))) / 2;
+  const hour = end.getHours();
+  return {
+    time: end.toISOString(),
+    intervalParametersStartTime: start.toISOString(),
+    data: {
+      air_temperature: Math.round(t * 10) / 10,
+      wind_speed: 3.8,
+      cloud_area_fraction: 5,
+      // Some rain this evening, today only.
+      precipitation_amount_mean: day === 0 && hour >= 17 && hour <= 19 ? 0.4 : 0.0,
+      precipitation_frozen_part: -9,
+      cloud_base_altitude: 9999,
+      symbol_code: DAY_SYMBOLS[Math.min(day, DAY_SYMBOLS.length - 1)],
+    },
+  };
+}
+
+/** SMHI snow1g v1: hourly steps for two days, then every 6 hours. Starts at 14:00. */
+export const MOCK_SMHI_RESPONSE = {
+  createdTime: new Date(2026, 2, 7, 13, 30).toISOString(),
+  referenceTime: new Date(2026, 2, 7, 13, 0).toISOString(),
+  geometry: { type: "Point", coordinates: [[18.0686, 59.3293]] },
+  timeSeries: (() => {
+    const steps = [];
+    let start = new Date(2026, 2, 7, 13, 0);
+    while (start < new Date(2026, 2, 13, 22, 0)) {
+      const hours = start < new Date(2026, 2, 9, 16, 0) ? 1 : 6;
+      const end = new Date(start.getTime() + hours * 3_600_000);
+      steps.push(smhiStep(start, end));
+      start = end;
+    }
+    return steps;
+  })(),
+};
+
+/** Open-Meteo hourly UV for today and tomorrow; each value is the mean of the hour before it. */
+export const MOCK_OPEN_METEO_UV_RESPONSE = {
+  timezone: "Europe/Stockholm",
+  hourly: (() => {
+    const time: number[] = [];
+    const uv_index: number[] = [];
+    for (let i = 0; i < 48; i++) {
+      const end = new Date(2026, 2, 7, i);
+      const startHour = (i + 23) % 24;
+      time.push(end.getTime() / 1000);
+      uv_index.push(startHour >= 11 && startHour <= 13 ? 3.2 : startHour === 14 ? 2.4 : 0.3);
+    }
+    return { time, uv_index };
+  })(),
 };
 
 function makePriceEntries(

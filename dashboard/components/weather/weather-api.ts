@@ -1,21 +1,25 @@
 /**
- * OpenWeatherMap 3.0 OneCall API — fetch, cache, and transform.
+ * The weather section's data: the SMHI Forecast, UV from Open-Meteo, and the
+ * outdoor temperature Reading.
+ *
+ * Weather data: SMHI open data (CC BY 4.0). UV index: Open-Meteo.com (CC BY 4.0).
  *
  * Config via environment variables:
- *   WEATHER_API_KEY  — required
- *   WEATHER_LAT      — latitude  (default: 59.3293 — Stockholm)
- *   WEATHER_LON      — longitude (default: 18.0686)
- *   WEATHER_UNITS    — standard | metric | imperial (default: metric)
- *   WEATHER_LANG     — language code (default: en)
- *   CACHE_DURATION   — seconds (default: 3600)
- *   API_TIMEOUT      — milliseconds (default: 10000)
+ *   WEATHER_LAT, WEATHER_LON — the house, in decimal degrees
+ *   API_TIMEOUT              — milliseconds
  */
 
 import { getWeatherIconName } from "./weather-icons.ts";
-import { fetchJson, createCache } from "@tjoskar/eink";
+import { isSunUp, sunTimes } from "./solar.ts";
+import { getForecastSteps, type ForecastStep } from "./smhi.ts";
+import { getUvHours, type UvHour } from "./uv.ts";
+import { getReading, OUTDOOR_TEMPERATURE_TOPIC } from "../../readings.ts";
 import { config } from "../../config.ts";
 
 const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** UV index from which the high-UV hours are shown. */
+const HIGH_UV = 3;
 
 export interface CurrentWeather {
   temp: string;
@@ -23,7 +27,8 @@ export interface CurrentWeather {
   windSpeed: string;
   sunTimes: string;
   rain: string;
-  uvInfo: string;
+  /** null hides the UV row. */
+  uvInfo: string | null;
 }
 
 export interface ForecastDay {
@@ -37,127 +42,111 @@ export interface WeatherDisplayData {
   forecast: ForecastDay[];
 }
 
-const cache = createCache<Record<string, unknown>>({
-  file: "weather_cache.json",
-  ttlSeconds: 1800,
-  label: "Weather",
-});
+const fmtTime = (d: Date) => d.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
 
-async function fetchFromApi(): Promise<Record<string, unknown> | null> {
-  const url =
-    `https://api.openweathermap.org/data/3.0/onecall` +
-    `?lat=${config.weatherLat}&lon=${config.weatherLon}&units=${config.weatherUnits}&lang=${config.weatherLang}&appid=${config.weatherApiKey}`;
+const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 
-  return fetchJson<Record<string, unknown>>(url, {
-    timeout: config.apiTimeout,
-    label: "Weather",
-  });
+function nearest(steps: ForecastStep[], now: Date): ForecastStep {
+  return steps.reduce((best, step) =>
+    Math.abs(step.time.getTime() - now.getTime()) < Math.abs(best.time.getTime() - now.getTime())
+      ? step
+      : best,
+  );
 }
 
-async function fetchWeatherData(): Promise<Record<string, unknown> | null> {
-  const cached = cache.read();
-  if (cached) return cached;
-
-  const data = await fetchFromApi();
-  if (data) {
-    cache.write(data);
-    return data;
-  }
-
-  const stale = cache.read(true);
-  if (stale) {
-    console.log("Using stale weather cache as fallback");
-    return stale;
-  }
-  return null;
-}
-
-function getRainTotal(data: Record<string, any>): number {
-  const current = data.current ?? {};
-  const now = new Date((current.dt ?? Date.now() / 1000) * 1000);
-  const today = now.toDateString();
-  const hourly: any[] = data.hourly ?? [];
-
-  if (hourly.length === 0) {
-    return current.rain?.["1h"] ?? 0;
-  }
-
+/** Forecast precipitation (mm) for the rest of today. */
+function rainRestOfToday(steps: ForecastStep[], now: Date): number {
   let total = 0;
-  for (const hour of hourly) {
-    const hourDate = new Date((hour.dt ?? 0) * 1000);
-    if (hourDate.toDateString() !== today) continue;
-    if (hourDate < now) continue;
-    total += hour.rain?.["1h"] ?? 0;
+  for (const step of steps) {
+    if (step.time <= now || !isSameDay(step.intervalStart, now)) continue;
+    total += step.precipitation ?? 0;
   }
   return total;
 }
 
-function getUvInfo(data: Record<string, any>): string {
-  const current = data.current ?? {};
-  const currentUv = current.uvi ?? 0;
-  const now = new Date((current.dt ?? Date.now() / 1000) * 1000);
-  const today = now.toDateString();
+/**
+ * UV now, plus today's peak and high-UV hours when it gets strong:
+ * `1 (4, 11 - 14)`. null when there is no UV data for today.
+ */
+function uvInfo(hours: UvHour[], now: Date): string | null {
+  const today = hours.filter((h) => isSameDay(h.start, now));
+  if (today.length === 0) return null;
 
-  let maxUv = currentUv;
-  const highUvHours: number[] = [];
+  const current = today.reduce((best, h) =>
+    Math.abs(h.start.getTime() + 1_800_000 - now.getTime()) <
+    Math.abs(best.start.getTime() + 1_800_000 - now.getTime())
+      ? h
+      : best,
+  );
+  const high = today.filter((h) => h.uv >= HIGH_UV).map((h) => h.start.getHours());
+  if (high.length === 0) return `${Math.round(current.uv)}`;
 
-  for (const hour of (data.hourly ?? []) as any[]) {
-    const hourDate = new Date((hour.dt ?? 0) * 1000);
-    if (hourDate.toDateString() !== today) continue;
-
-    const uv = hour.uvi ?? 0;
-    if (uv > maxUv) maxUv = uv;
-    if (uv >= 3) highUvHours.push(hourDate.getHours());
-  }
-
-  if (highUvHours.length === 0) {
-    return `${Math.round(currentUv)}`;
-  }
-
-  const minH = Math.min(...highUvHours);
-  const maxH = Math.max(...highUvHours);
-  return `${Math.round(currentUv)} (${Math.round(maxUv)}, ${minH} - ${maxH})`;
+  const max = Math.max(...today.map((h) => h.uv));
+  return `${Math.round(current.uv)} (${Math.round(max)}, ${Math.min(...high)} - ${Math.max(...high)})`;
 }
 
-const fmtTime = (d: Date) => d.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+/** The next five days after today: min/max temperature and the symbol nearest midday. */
+function fiveDays(steps: ForecastStep[], now: Date): ForecastDay[] {
+  const byDay = new Map<string, ForecastStep[]>();
+  for (const step of steps) {
+    if (isSameDay(step.time, now) || step.time < now) continue;
+    const key = step.time.toDateString();
+    byDay.set(key, [...(byDay.get(key) ?? []), step]);
+  }
 
+  const days: ForecastDay[] = [];
+  for (const daySteps of byDay.values()) {
+    if (days.length === 5) break;
+    const temps = daySteps.flatMap((s) => (s.temperature === undefined ? [] : [s.temperature]));
+    if (temps.length === 0) continue;
+
+    const date = daySteps[0].time;
+    const midday = new Date(date);
+    midday.setHours(12, 0, 0, 0);
+    days.push({
+      day: DAYS_OF_WEEK[date.getDay()],
+      icon: getWeatherIconName(nearest(daySteps, midday).symbol, false),
+      temp: `${Math.round(Math.min(...temps))}°/${Math.round(Math.max(...temps))}°`,
+    });
+  }
+  return days;
+}
+
+/**
+ * null when SMHI is down and the cache is empty or entirely in the past:
+ * the section shows "Väderdata saknas".
+ */
 export async function getWeatherDisplayData(): Promise<WeatherDisplayData | null> {
-  const data = await fetchWeatherData();
-  if (!data) return null;
+  // A UV failure only hides the UV row, never the whole section.
+  const [steps, uvHours] = await Promise.all([
+    getForecastSteps(),
+    getUvHours().catch((err: unknown) => {
+      console.error("UV failed:", err);
+      return [];
+    }),
+  ]);
+  const now = new Date();
+  // A stale cache can hold nothing but the past (SMHI down for over a week): no Forecast either.
+  if (!steps.some((s) => s.time >= now)) return null;
 
-  const current = data.current ?? {};
-  const temp = (current as any).temp ?? 0;
-  const iconCode = (current as any).weather?.[0]?.icon ?? "01d";
-  const windSpeed = (current as any).wind_speed ?? 0;
+  const lat = Number(config.weatherLat);
+  const lon = Number(config.weatherLon);
 
-  const sunrise = new Date(((current as any).sunrise ?? 0) * 1000);
-  const sunset = new Date(((current as any).sunset ?? 0) * 1000);
-
-  const rainTotal = getRainTotal(data as Record<string, any>);
-  const uvInfo = getUvInfo(data as Record<string, any>);
-
-  const daily: any[] = (data as any).daily ?? [];
-  const forecast: ForecastDay[] = daily.slice(1, 6).map((day) => {
-    const dt = new Date((day.dt ?? 0) * 1000);
-    const dayIconCode = day.weather?.[0]?.icon ?? "01d";
-    const min = Math.round(day.temp?.min ?? 0);
-    const max = Math.round(day.temp?.max ?? 0);
-    return {
-      day: DAYS_OF_WEEK[dt.getDay()],
-      icon: getWeatherIconName(dayIconCode),
-      temp: `${min}°/${max}°`,
-    };
-  });
+  // Until the first Reading: SMHI's first step at or after now with a temperature.
+  const forecastTemp = steps.find((s) => s.time >= now && s.temperature !== undefined)?.temperature;
+  const temp = getReading(OUTDOOR_TEMPERATURE_TOPIC) ?? forecastTemp;
+  const current = nearest(steps, now);
+  const { sunrise, sunset } = sunTimes(now, lat, lon);
 
   return {
     current: {
-      temp: `${Math.round(temp)}°`,
-      icon: getWeatherIconName(iconCode),
-      windSpeed: `${Math.round(windSpeed)} m/s`,
-      sunTimes: `${fmtTime(sunrise)} / ${fmtTime(sunset)}`,
-      rain: `${rainTotal.toFixed(1)} mm`,
-      uvInfo,
+      temp: temp === undefined ? "–" : `${Math.round(temp)}°`,
+      icon: getWeatherIconName(current.symbol, !isSunUp(now, lat, lon)),
+      windSpeed: current.windSpeed === undefined ? "–" : `${Math.round(current.windSpeed)} m/s`,
+      sunTimes: `${sunrise ? fmtTime(sunrise) : "--:--"} / ${sunset ? fmtTime(sunset) : "--:--"}`,
+      rain: `${rainRestOfToday(steps, now).toFixed(1)} mm`,
+      uvInfo: uvInfo(uvHours, now),
     },
-    forecast,
+    forecast: fiveDays(steps, now),
   };
 }
