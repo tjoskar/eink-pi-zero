@@ -42,9 +42,10 @@ const cache = createCache<SmhiResponse>({
 /** SMHI's missing value for every parameter. */
 const MISSING = 9999;
 /**
- * -9 means "not applicable" on some parameters (e.g. precipitation_frozen_part).
- * Filtered defensively on every parameter used below that can never be -9;
- * not on air temperature, where it is a real value.
+ * -9 means "not applicable" (e.g. precipitation_frozen_part without
+ * precipitation). The parameters read below never use it, but none of them
+ * can really be -9, so it is dropped defensively; except air temperature,
+ * where -9 is a real value.
  */
 const NOT_APPLICABLE = -9;
 

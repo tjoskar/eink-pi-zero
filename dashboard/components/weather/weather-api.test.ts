@@ -119,6 +119,12 @@ describe("current weather", () => {
     expect((await getWeatherDisplayData())?.current.icon).toBe("partly_cloudy_night");
   });
 
+  test("a missing wind speed shows a dash, not 0 m/s", async () => {
+    responses.smhi = smhiWith({ 15: { wind_speed: 9999 } });
+    vi.setSystemTime(at(14, 50)); // nearest step: 15:00
+    expect((await getWeatherDisplayData())?.current.windSpeed).toBe("–");
+  });
+
   test("a missing temperature (9999) falls through to the next step", async () => {
     responses.smhi = smhiWith({ 15: { air_temperature: 9999 }, 16: { air_temperature: 12.3 } });
     expect((await getWeatherDisplayData())?.current.temp).toBe("12°");
@@ -179,6 +185,13 @@ describe("SMHI responses", () => {
 
 describe("SMHI down", () => {
   test("with an empty cache there is no weather at all", async () => {
+    responses.smhi = undefined;
+    expect(await getWeatherDisplayData()).toBeNull();
+  });
+
+  test("a stale cache with only past steps counts as no weather", async () => {
+    await getWeatherDisplayData();
+    vi.setSystemTime(new Date(2026, 2, 20, 12)); // after the last step
     responses.smhi = undefined;
     expect(await getWeatherDisplayData()).toBeNull();
   });

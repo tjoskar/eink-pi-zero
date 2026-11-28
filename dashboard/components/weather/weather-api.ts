@@ -112,7 +112,10 @@ function fiveDays(steps: ForecastStep[], now: Date): ForecastDay[] {
   return days;
 }
 
-/** null when SMHI is down and nothing is cached: the section shows "Väderdata saknas". */
+/**
+ * null when SMHI is down and the cache is empty or entirely in the past:
+ * the section shows "Väderdata saknas".
+ */
 export async function getWeatherDisplayData(): Promise<WeatherDisplayData | null> {
   // A UV failure only hides the UV row, never the whole section.
   const [steps, uvHours] = await Promise.all([
@@ -122,9 +125,10 @@ export async function getWeatherDisplayData(): Promise<WeatherDisplayData | null
       return [];
     }),
   ]);
-  if (steps.length === 0) return null;
-
   const now = new Date();
+  // A stale cache can hold nothing but the past (SMHI down for over a week): no Forecast either.
+  if (!steps.some((s) => s.time >= now)) return null;
+
   const lat = Number(config.weatherLat);
   const lon = Number(config.weatherLon);
 
@@ -138,7 +142,7 @@ export async function getWeatherDisplayData(): Promise<WeatherDisplayData | null
     current: {
       temp: temp === undefined ? "–" : `${Math.round(temp)}°`,
       icon: getWeatherIconName(current.symbol, !isSunUp(now, lat, lon)),
-      windSpeed: `${Math.round(current.windSpeed ?? 0)} m/s`,
+      windSpeed: current.windSpeed === undefined ? "–" : `${Math.round(current.windSpeed)} m/s`,
       sunTimes: `${sunrise ? fmtTime(sunrise) : "--:--"} / ${sunset ? fmtTime(sunset) : "--:--"}`,
       rain: `${rainRestOfToday(steps, now).toFixed(1)} mm`,
       uvInfo: uvInfo(uvHours, now),
