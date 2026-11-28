@@ -8,6 +8,7 @@ The author's own home display: weather, device status and household readings on 
 - UV index: [Open-Meteo.com](https://open-meteo.com/), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). No API key for non-commercial use.
 - Day boundaries ("rest of today", the five days) and sun times use the Pi's time zone, which must be Europe/Stockholm (the Raspberry Pi OS setting).
 - Current outdoor temperature: the `controlpanel/reading/outdoor_temperature` Reading from Home Assistant, a plain number; SMHI's temperature until it arrives.
+- Offline mark: the footer shows `Offline` when the broker has been unreachable for more than 5 minutes, or when Home Assistant publishes `offline` on `homeassistant/status` (its default last will). It appears and clears at the next scheduled render.
 
 ## Wiring
 
