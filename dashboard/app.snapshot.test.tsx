@@ -19,13 +19,14 @@ import { fileURLToPath } from "node:url";
 import { assertSnapshot } from "../test/snapshot-utils.ts";
 import { overrideConfig } from "./config.ts";
 import { renderApp } from "./app.tsx";
-import { devicesState } from "./components/devices/devices.tsx";
+import { setConfirmedState, setEndTime } from "./components/devices/devices.tsx";
 import { OUTDOOR_TEMPERATURE_TOPIC, setReading } from "./readings.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SNAPSHOTS_DIR = join(__dirname, "__snapshots__");
 
 vi.useFakeTimers();
+vi.spyOn(console, "log").mockImplementation(() => {});
 vi.setSystemTime(new Date(2026, 2, 7, 14, 30, 0));
 
 // Mock node:fs selectively — block cache files but allow font loading
@@ -90,17 +91,13 @@ afterAll(() => {
 });
 
 test("home dashboard renders consistently", async () => {
-  devicesState.set(
-    new Map([
-      [
-        "test/washing_machine",
-        { label: "Washing Machine", icon: "local_laundry_service", on: true },
-      ],
-      ["test/dryer", { label: "Dryer", icon: "dry_cleaning", on: false }],
-      ["test/engine_heater", { label: "Engine Heater", icon: "local_fire_department", on: true }],
-      ["test/bike_charger", { label: "Bike Charger", icon: "electric_bike", on: false }],
-    ]),
-  );
+  // Every End time slot in use: the column at its tallest.
+  for (const device of ["washing_machine", "dryer", "dishwasher", "printer", "engine_heater"]) {
+    setConfirmedState(`controlpanel/statechange/${device}`, true);
+  }
+  setEndTime("controlpanel/end_time/dryer", "2026-03-07T14:50:00Z");
+  setEndTime("controlpanel/end_time/dishwasher", "2026-03-07T15:05:00Z");
+  setEndTime("controlpanel/end_time/printer", "2026-03-07T17:20:00Z");
 
   setReading(OUTDOOR_TEMPERATURE_TOPIC, "4.2");
 

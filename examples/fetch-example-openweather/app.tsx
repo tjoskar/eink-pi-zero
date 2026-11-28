@@ -2,10 +2,10 @@ import { Icon, Canvas, render } from "@tjoskar/eink";
 import { getWeatherDisplayData, type WeatherDisplayData, type ForecastDay } from "./weather-api.ts";
 
 const DETAIL_ICONS = {
-  wind: "wind_power",
+  wind: "air",
   sun: "wb_twilight",
   rain: "water_drop",
-  uv: "wb_iridescent",
+  uv: "sunny",
 } as const;
 
 function DetailRow({ icon, text }: { icon: string; text: string }) {

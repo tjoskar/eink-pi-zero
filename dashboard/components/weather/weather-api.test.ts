@@ -206,7 +206,7 @@ describe("SMHI down", () => {
 
 test("five days after today: min/max temperature and the symbol nearest midday", async () => {
   expect((await getWeatherDisplayData())?.forecast).toEqual([
-    { day: "Sun", icon: "severe_cold", temp: "0°/4°" },
+    { day: "Sun", icon: "weather_snowy", temp: "0°/4°" },
     { day: "Mon", icon: "clear_day", temp: "-1°/3°" },
     { day: "Tue", icon: "rainy", temp: "2°/7°" },
     { day: "Wed", icon: "partly_cloudy_day", temp: "1°/6°" },

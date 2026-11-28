@@ -13,6 +13,10 @@ import {
   ENGINE_HEATER_TOPIC,
   STATECHANGE_TOPICS,
   ENGINE_HEATER_REQUEST_TOPIC,
+  END_TIME_TOPICS,
+  isEndTimeTopic,
+  setEndTime,
+  setConfirmedState,
 } from "./components/devices/devices.tsx";
 import { createEngineHeater } from "./components/devices/engine-heater.ts";
 import { READING_TOPICS, isReadingTopic, setReading } from "./readings.ts";
@@ -106,13 +110,14 @@ async function main(): Promise<void> {
   });
 
   await using mqtt = connectMqtt({
-    topics: [STATECHANGE_TOPICS, READING_TOPICS],
+    topics: [STATECHANGE_TOPICS, END_TIME_TOPICS, READING_TOPICS],
     onMessage(topic, payload) {
       // A Reading shows at the next scheduled render, never triggers one.
       if (isReadingTopic(topic)) {
         setReading(topic, payload);
         return false;
       }
+      if (isEndTimeTopic(topic)) return setEndTime(topic, payload);
 
       const value = payload.toLowerCase();
       if (value !== "on" && value !== "off") return false;
@@ -123,13 +128,7 @@ async function main(): Promise<void> {
         return heater.confirmed(on);
       }
 
-      const devices = devicesState.get();
-      const device = devices.get(topic);
-      if (!device) return false;
-      if (device.on === on) return false;
-      devicesState.set(new Map(devices).set(topic, { ...device, on }));
-      console.log(`${device.label}: ${on ? "ON" : "OFF"}`);
-      return true;
+      return setConfirmedState(topic, on);
     },
     onUpdate: () =>
       updateDisplay().catch((err) =>

@@ -1,18 +1,23 @@
 /**
  * Material Icons Codepoint Mapping
  *
- * Maps icon names to their Unicode codepoints in the Material Icons font.
+ * Maps icon names to their Unicode codepoints in the icon font
+ * (`fonts/material-icons.woff`, which is Material Symbols Outlined).
  * This allows using friendly names like "home" instead of "\ue88a".
  *
- * The codepoints are from Google's Material Icons font:
+ * Material Symbols and the older Material Icons font share most names but
+ * not all codepoints, so take the codepoint for Material Symbols:
  * @see https://fonts.google.com/icons
  *
  * To find a codepoint for an icon:
- * 1. Go to https://fonts.google.com/icons
+ * 1. Go to https://fonts.google.com/icons (Material Symbols)
  * 2. Search for the icon (e.g., "thermostat")
  * 3. Click on the icon
- * 4. Look for "Code point" in the right panel (e.g., "e8b2")
- * 5. Add it to this mapping as: thermostat: "\ue8b2"
+ * 4. Look for "Code point" in the right panel (e.g., "f076")
+ * 5. Add it to this mapping as: thermostat: "\uf076"
+ *
+ * `icon.test.tsx` checks every entry against the font: the codepoint must
+ * draw the same glyph as the icon's name does.
  *
  * Note: This is a subset of available icons. Add more as needed.
  */
@@ -44,31 +49,33 @@ export const ICON_CODEPOINTS: Record<string, string> = {
   delete: "\ue872",
 
   // Weather & Environment
-  thermostat: "\ue8b2",
+  thermostat: "\uf076",
   wb_sunny: "\ue430",
   wb_cloudy: "\ue42d",
   wb_twilight: "\ue1c6",
-  wb_iridescent: "\ue81a",
+  wb_iridescent: "\ue436",
+  sunny: "\ue81a",
   light_mode: "\ue518",
   dark_mode: "\ue51c",
   nights_stay: "\uea46",
   cloud: "\ue2bd",
   water_drop: "\ue798",
-  air: "\ue63d",
+  air: "\uefd8",
   storm: "\uf070",
   ac_unit: "\ueb3b",
   foggy: "\ue818",
   rainy: "\uf176",
   rainy_heavy: "\uf61f",
-  umbrella: "\ue16c",
+  umbrella: "\uf1ad",
   clear_day: "\uf157",
   clear_night: "\uef44",
   partly_cloudy_day: "\uf172",
   partly_cloudy_night: "\uf174",
-  thunderstorm: "\ue80f",
-  severe_cold: "\ue2cd",
-  blur_on: "\ue8e7",
-  wind_power: "\uefd8",
+  thunderstorm: "\uebdb",
+  severe_cold: "\uebd3",
+  weather_snowy: "\ue2cd",
+  blur_on: "\ue3a5",
+  wind_power: "\uec0c",
 
   // Energy & Power
   bolt: "\uea0b",
@@ -78,15 +85,20 @@ export const ICON_CODEPOINTS: Record<string, string> = {
   solar_power: "\uec0f",
 
   // Home & Devices
-  light: "\ue0f0",
+  light: "\uf02a",
   lightbulb: "\ue0f0",
   tv: "\ue333",
   speaker: "\ue32d",
   router: "\ue328",
   sensors: "\ue51e",
-  local_laundry_service: "\ue832",
-  dry_cleaning: "\ue54a",
-  local_fire_department: "\ue531",
+  local_laundry_service: "\ue54a",
+  laundry: "\ue2a8",
+  flatware: "\uf00c",
+  print: "\ue555",
+  view_in_ar: "\ue9fe",
+  directions_car: "\ueff7",
+  dry_cleaning: "\uea58",
+  local_fire_department: "\uef55",
   electric_bike: "\ueb1b",
   sync_problem: "\ue629",
 
