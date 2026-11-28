@@ -26,10 +26,10 @@ const WEATHER_ICON_MAP: Record<string, string> = {
   "11d": "thunderstorm",
   "11n": "thunderstorm",
   // Snow
-  "13d": "severe_cold",
-  "13n": "severe_cold",
+  "13d": "weather_snowy",
+  "13n": "weather_snowy",
   // Mist / fog
-  "50d": "blur_on",
+  "50d": "foggy",
   "50n": "foggy",
 };
 

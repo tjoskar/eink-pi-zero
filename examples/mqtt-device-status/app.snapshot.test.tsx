@@ -10,8 +10,8 @@ const SNAPSHOTS_DIR = join(__dirname, "__snapshots__");
 
 const DEVICES: DeviceState[] = [
   { label: "Washing Machine", icon: "local_laundry_service", on: true },
-  { label: "Dryer", icon: "dry_cleaning", on: false },
-  { label: "Engine Heater", icon: "local_fire_department", on: true },
+  { label: "Dryer", icon: "laundry", on: false },
+  { label: "Engine Heater", icon: "directions_car", on: true },
   { label: "Bike Charger", icon: "electric_bike", on: false },
 ];
 
