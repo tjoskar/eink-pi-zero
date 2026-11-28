@@ -128,7 +128,7 @@ function connectMqtt(): mqtt.MqttClient {
 }
 
 async function main(): Promise<void> {
-  using _hardware = await initHardware();
+  await using _hardware = await initHardware();
 
   // Initial render
   console.log("Rendering initial state (all devices off)...");

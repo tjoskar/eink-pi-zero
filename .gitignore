@@ -8,6 +8,7 @@ __pycache__/
 .cache/
 *.png
 !**/__snapshots__/*.png
+!**/__fixtures__/*.png
 *.actual.png
 *.diff.png
 node_modules/

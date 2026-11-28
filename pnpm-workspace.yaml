@@ -5,3 +5,5 @@ packages:
 
 allowBuilds:
   esbuild: true
+  # Not needed: Koffi loads its prebuilt @koromix/koffi-<platform> package.
+  koffi: false

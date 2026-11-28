@@ -2,7 +2,7 @@
 /**
  * Hardware Debug CLI
  *
- * Interactive tool for testing hardware daemon (GPIO + e-ink display).
+ * Interactive tool for testing the hardware (panel, button, LED) by hand.
  *
  * Usage:
  *   pnpm --filter @tjoskar/eink hardware-debug
@@ -10,7 +10,7 @@
  * Commands:
  *   led <pin> on|off|blink - Set LED state (e.g., "led 13 on")
  *   subscribe <pin>      - Subscribe to button events (e.g., "subscribe 21")
- *   render <path> [fast] - Render image to e-ink (e.g., "render /tmp/img.png fast")
+ *   render <path> [fast|gray4] - Render a PNG to the panel (e.g., "render /tmp/img.png gray4")
  *   exit                 - Exit the CLI
  */
 
@@ -28,7 +28,7 @@ function printHelp(): void {
 Hardware Debug CLI - Commands:
   led <pin> on|off|blink - Set LED state (e.g., "led 13 on")
   subscribe <pin>      - Subscribe to button events (e.g., "subscribe 21")
-  render <path> [fast] - Render image to e-ink (e.g., "render /tmp/img.png fast")
+  render <path> [fast|gray4] - Render a PNG (e.g., "render /tmp/img.png gray4")
   help                 - Show this help
   exit                 - Exit the CLI
 `);
@@ -70,14 +70,17 @@ async function handleCommand(line: string): Promise<boolean> {
 
       case "render": {
         const path = parts[1];
-        const fast = parts[2]?.toLowerCase() === "fast";
-        if (!path) {
-          console.log("Usage: render <path> [fast]");
+        const variant = parts[2]?.toLowerCase();
+        if (!path || (variant && variant !== "fast" && variant !== "gray4")) {
+          console.log("Usage: render <path> [fast|gray4]");
           break;
         }
-        console.log(`Rendering ${path}${fast ? " (fast mode)" : ""}...`);
+        console.log(`Rendering ${path}${variant ? ` (${variant})` : ""}...`);
         const imageBuffer = await readFile(path);
-        await renderToDisplay(imageBuffer, { fast });
+        await renderToDisplay(
+          imageBuffer,
+          variant === "gray4" ? { mode: "gray4" } : { fast: variant === "fast" },
+        );
         console.log(`✓ Rendered ${path}`);
         break;
       }
@@ -110,8 +113,6 @@ async function main(): Promise<void> {
     console.log("Running in MOCK mode - hardware commands will be simulated.\n");
   }
 
-  // Start the daemon
-  console.log("Starting hardware daemon...");
   const hardware = await initHardware();
   console.log();
 
@@ -127,16 +128,11 @@ async function main(): Promise<void> {
     }
   });
 
-  rl.on("close", () => {
+  // Ctrl+C or Ctrl+D: wait for cleanup (a running render ends in deep sleep).
+  rl.on("SIGINT", () => rl.close());
+  rl.on("close", async () => {
     console.log("\nCleaning up...");
-    hardware.cleanup();
-    process.exit(0);
-  });
-
-  // Handle Ctrl+C
-  process.on("SIGINT", () => {
-    console.log("\nCleaning up...");
-    hardware.cleanup();
+    await hardware.cleanup();
     process.exit(0);
   });
 }

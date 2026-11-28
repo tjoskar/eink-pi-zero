@@ -70,7 +70,7 @@ async function updateDisplay(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  using _hardware = await initHardware();
+  await using _hardware = await initHardware();
 
   console.log("Rendering initial dashboard...");
   await updateDisplay();

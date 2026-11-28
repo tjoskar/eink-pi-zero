@@ -1,0 +1,48 @@
+gpio PWR 1
+spi open
+gpio RST 1
+delay 20
+gpio RST 0
+delay 2
+gpio RST 1
+delay 20
+cmd 06
+data 17 17 28 17
+cmd 01
+data 07 07 28 17
+cmd 04
+delay 100
+cmd 71
+read BUSY
+delay 20
+cmd 00
+data 1f
+cmd 61
+data 03 20 01 e0
+cmd 15
+data 00
+cmd 50
+data 10 07
+cmd 60
+data 22
+cmd 10
+data[48000] 08b6b438d58f4d18
+cmd 13
+data[48000] c1a77ccde370e283
+cmd 12
+delay 100
+cmd 71
+read BUSY
+delay 20
+cmd 50
+data f7
+cmd 02
+cmd 71
+read BUSY
+delay 20
+cmd 07
+data a5
+delay 2000
+spi close
+gpio RST 0
+gpio PWR 0
