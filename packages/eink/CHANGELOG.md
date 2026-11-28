@@ -11,7 +11,7 @@ All notable changes to `@tjoskar/eink` are documented here. The format is based 
 - A warning is logged once per font family that is used but not registered.
 - `renderToDisplay(png, { mode: "gray4" })`: a 4-gray full refresh (every pixel to its nearest of four levels; no dithering yet).
 - A refresh guard: at least 2 s from the end of one render to the start of the next, at most 3 renders a minute and 20 an hour. A render that comes too soon waits, and only the latest waiting frame is drawn. Reaching the hourly limit is treated as a render loop: the process cleans up and exits with `REFRESH_LOOP_EXIT_CODE` (75). The limits can be changed with `initHardware({ refreshLimits })`.
-- Icon names `sunny`, `weather_snowy`, `laundry`, `flatware`, `print`, `view_in_ar` and `directions_car`.
+- Icon names `sunny`, `weather_snowy`, `laundry`, `flatware`, `print`, `view_in_ar`, `directions_car` and `cloud_off`.
 - `dist/cleanup.js [led-pin...]`, for a systemd unit's `ExecStopPost=`: drives the panel's power, RST, DC and the given LEDs low after a crash or SIGKILL.
 
 ### Changed

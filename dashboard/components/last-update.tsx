@@ -1,6 +1,8 @@
 /**
- * Last update timestamp — shows current time in HH:MM:SS format.
+ * Footer: the last update time, HH:MM:SS, with the Offline mark left of it
+ * when shown.
  */
+import { OfflineMark, isOffline } from "../offline.tsx";
 
 export function LastUpdate() {
   const now = new Date();
@@ -11,9 +13,20 @@ export function LastUpdate() {
     hour12: false,
   });
 
+  if (!isOffline(now)) {
+    return (
+      <text size={14} color="darkGray" textAlign="right">
+        {timeStr}
+      </text>
+    );
+  }
+
   return (
-    <text size={14} color="darkGray" textAlign="right">
-      {timeStr}
-    </text>
+    <view direction="row" justify="end" align="center" gap={8}>
+      <OfflineMark />
+      <text size={14} color="darkGray">
+        {timeStr}
+      </text>
+    </view>
   );
 }

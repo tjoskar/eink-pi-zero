@@ -116,6 +116,7 @@ export const ICON_CODEPOINTS: Record<string, string> = {
   error: "\ue000",
   help: "\ue887",
   notifications: "\ue7f4",
+  cloud_off: "\ue2c1",
 
   // Misc
   eco: "\uea35",

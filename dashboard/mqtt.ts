@@ -38,11 +38,14 @@ export function connectMqtt(opts: {
   /** Handle a message (payload trimmed); return true if it should trigger a render. */
   onMessage: (topic: string, payload: string) => boolean;
   onUpdate: () => void;
+  /** The broker connection was made (true) or lost (false); false first, before connecting. */
+  onConnectionChange: (connected: boolean) => void;
 }): { publish: (topic: string, payload: string) => void } & AsyncDisposable {
   const url = `mqtt://${config.mqttHost}:${config.mqttPort}`;
   console.log(`Connecting to MQTT broker at ${url}...`);
 
   const debouncer = createDebouncedUpdater(opts.onUpdate);
+  opts.onConnectionChange(false);
 
   const client = mqtt.connect(url, {
     username: config.mqttUsername,
@@ -55,6 +58,7 @@ export function connectMqtt(opts: {
   });
 
   client.on("connect", () => {
+    opts.onConnectionChange(true);
     console.log(`Connected to MQTT broker. Subscribing to ${opts.topics.join(", ")}`);
     client.subscribe(opts.topics);
     client.publish(STATUS_TOPIC, "online", { qos: 1, retain: true });
@@ -68,6 +72,11 @@ export function connectMqtt(opts: {
 
   client.on("error", (err) => {
     console.error("MQTT error", err);
+  });
+
+  // Every lost connection and every failed reconnect attempt ends in `close`.
+  client.on("close", () => {
+    opts.onConnectionChange(false);
   });
 
   client.on("offline", () => {

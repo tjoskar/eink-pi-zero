@@ -21,6 +21,7 @@ import { overrideConfig } from "./config.ts";
 import { renderApp } from "./app.tsx";
 import { setConfirmedState, setEndTime } from "./components/devices/devices.tsx";
 import { OUTDOOR_TEMPERATURE_TOPIC, setReading } from "./readings.ts";
+import { setHaStatus } from "./offline.tsx";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SNAPSHOTS_DIR = join(__dirname, "__snapshots__");
@@ -107,4 +108,16 @@ test("home dashboard renders consistently", async () => {
     snapshotsDir: SNAPSHOTS_DIR,
     name: "home-dashboard",
   });
+});
+
+test("home dashboard with the Offline mark", async () => {
+  setHaStatus("offline");
+  try {
+    assertSnapshot(await renderApp(), {
+      snapshotsDir: SNAPSHOTS_DIR,
+      name: "home-dashboard-offline",
+    });
+  } finally {
+    setHaStatus("online");
+  }
 });

@@ -20,6 +20,7 @@ import {
 } from "./components/devices/devices.tsx";
 import { createEngineHeater } from "./components/devices/engine-heater.ts";
 import { READING_TOPICS, isReadingTopic, setReading } from "./readings.ts";
+import { HA_STATUS_TOPIC, brokerConnected, brokerLost, setHaStatus } from "./offline.tsx";
 import {
   setTheme,
   EINK_BW_THEME,
@@ -110,11 +111,17 @@ async function main(): Promise<void> {
   });
 
   await using mqtt = connectMqtt({
-    topics: [STATECHANGE_TOPICS, END_TIME_TOPICS, READING_TOPICS],
+    topics: [STATECHANGE_TOPICS, END_TIME_TOPICS, READING_TOPICS, HA_STATUS_TOPIC],
     onMessage(topic, payload) {
-      // A Reading shows at the next scheduled render, never triggers one.
+      // A Reading and the Offline mark show at the next scheduled render,
+      // never trigger one.
       if (isReadingTopic(topic)) {
         setReading(topic, payload);
+        return false;
+      }
+      if (topic === HA_STATUS_TOPIC) {
+        console.log(`Home Assistant status: ${payload}`);
+        setHaStatus(payload);
         return false;
       }
       if (isEndTimeTopic(topic)) return setEndTime(topic, payload);
@@ -134,6 +141,7 @@ async function main(): Promise<void> {
       updateDisplay().catch((err) =>
         console.error("Render error", err instanceof Error ? err : undefined),
       ),
+    onConnectionChange: (connected) => (connected ? brokerConnected() : brokerLost()),
   });
 
   await onButtonPress(ENGINE_HEATER_BUTTON_PIN, () => heater.press());
