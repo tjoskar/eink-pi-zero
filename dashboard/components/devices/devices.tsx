@@ -40,7 +40,7 @@ const initialDevices = new Map<string, DeviceState>([
   ],
   [`${STATECHANGE_PREFIX}dryer`, { label: "Dryer", icon: "laundry", on: false }],
   [`${STATECHANGE_PREFIX}dishwasher`, { label: "Dishwasher", icon: "flatware", on: false }],
-  [`${STATECHANGE_PREFIX}printer`, { label: "3D Printer", icon: "print", on: false }],
+  [`${STATECHANGE_PREFIX}printer`, { label: "3D Printer", icon: "view_in_ar", on: false }],
   [ENGINE_HEATER_TOPIC, { label: "Engine Heater", icon: "directions_car", on: false }],
   [
     `${STATECHANGE_PREFIX}bike_charger`,

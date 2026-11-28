@@ -95,6 +95,7 @@ export const ICON_CODEPOINTS: Record<string, string> = {
   laundry: "\ue2a8",
   flatware: "\uf00c",
   print: "\ue555",
+  view_in_ar: "\ue9fe",
   directions_car: "\ueff7",
   dry_cleaning: "\uea58",
   local_fire_department: "\uef55",
